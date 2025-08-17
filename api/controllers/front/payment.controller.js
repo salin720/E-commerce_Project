@@ -1,5 +1,7 @@
 const Payment = require("../../models/payment");
+const Order = require("../../models/order.model");
 const crypto = require("node:crypto");
+const axios = require("axios");
 require("dotenv").config();
 
 exports.createPayment = async (req, res) => {
@@ -10,8 +12,8 @@ exports.createPayment = async (req, res) => {
         const failure_url = process.env.CALLBACK_URL;
 
         // Signature
-        const signed_field_names = 'total_amount';
-        const signaturePayload = "total_amount=" + amount;
+        const signed_field_names = 'total_amount,transaction_uuid,product_code';
+        const signaturePayload = "total_amount=" + amount +",transaction_uuid=" + orderId + ",product_code=EPAYTEST";
 
         const signature = crypto
             .createHmac('sha256', "8gBm/:&EnhH.1/q")
@@ -28,12 +30,13 @@ exports.createPayment = async (req, res) => {
                 method: 'POST',
                 fields: {
                     //   TODO - Add more fields as needed
-                    amount: amount.toString(),
-                    total_amount: amount.toString(),
-                    transaction_uuid: orderId,
-                    product_code: productId,
+                    amount: amount.toString(), // required by eSewa
+                    total_amount: amount.toString(), // required by eSewa
+                    transaction_uuid: orderId, // unique per transaction
+                    product_code: "EPAYTEST", // set to orderId or your product code
                     product_service_charge: "0",
                     product_delivery_charge: "0",
+                    tax_amount: "0",
                     success_url: success_url,
                     failure_url: failure_url,
                     signed_field_names,
@@ -67,17 +70,52 @@ exports.createPayment = async (req, res) => {
 
 exports.verifyPayment = async (req, res) => {
     try {
-        const {txn_id} = req.query;
-
-        const payment = await Payment.findOne({transactionId: txn_id});
-
-        if (payment && payment.status === "Paid") {
-            return res.json({success: true});
+        const { txn_id, amt, pid } = req.query;
+        // txn_id = eSewa's reference id (rid), pid = our payment id/order id, amt = amount
+        if (!txn_id || !amt || !pid) {
+            return res.status(400).json({ success: false, error: "Missing required parameters." });
         }
-
-        return res.json({success: false});
+        // Call eSewa verification API
+        const verificationUrl = "https://rc-epay.esewa.com.np/api/epay/transaction/status/";
+        const scd = process.env.ESEWA_SCD || "EPAYTEST"; // merchant code
+        try {
+            const response = await axios.post(verificationUrl, {
+                amt,
+                rid: txn_id,
+                pid,
+                scd
+            });
+            // eSewa returns status: 'COMPLETE' for success
+            if (response.data.status === "COMPLETE") {
+                // Update local payment record
+                const payment = await Payment.findOneAndUpdate(
+                    { orderId: pid },
+                    { status: "Paid", transactionId: txn_id, paidAt: new Date() },
+                    { new: true }
+                );
+                // Create order if not exists
+                if (payment && payment.userId) {
+                    const existingOrder = await Order.findOne({ userId: payment.userId, status: { $ne: "Cancelled" }, _id: pid });
+                    if (!existingOrder) {
+                        await Order.create({ userId: payment.userId, status: "Confirmed", _id: pid });
+                    }
+                }
+                return res.json({ success: true, payment });
+            } else {
+                // Mark as failed
+                await Payment.findOneAndUpdate(
+                    { orderId: pid },
+                    { status: "Failed", transactionId: txn_id },
+                    { new: true }
+                );
+                return res.json({ success: false, error: response.data });
+            }
+        } catch (err) {
+            console.error("eSewa Verification Error:", err.message);
+            return res.status(500).json({ success: false, error: "eSewa verification failed." });
+        }
     } catch (err) {
         console.error("Verify Error:", err.message);
-        res.status(500).json({success: false});
+        res.status(500).json({ success: false });
     }
 };
