@@ -94,6 +94,49 @@
 //             })
 //     }
 //
+//     const handleEsewaCheckout = async () => {
+//         setEsewaLoading(true);
+//         try {
+//             // Prepare order data
+//             let data = [];
+//             for (let i in cart) {
+//                 data.push({
+//                     productId: i,
+//                     qty: cart[i].qty,
+//                 });
+//             }
+//             // Call backend to get eSewa form fields
+//             const res = await http.post("/payments/domi/create", {
+//                 amount: totalPrice,
+//                 orderId: `ECOM-${Date.now()}`,
+//                 userId: null // set userId if available
+//             });
+//             const { esewa } = res.data;
+//             if (esewa && esewa.action && esewa.fields) {
+//                 // Build and submit form
+//                 const form = document.createElement("form");
+//                 form.method = esewa.method || "POST";
+//                 form.action = esewa.action;
+//                 Object.entries(esewa.fields).forEach(([key, value]) => {
+//                     const input = document.createElement("input");
+//                     input.type = "hidden";
+//                     input.name = key;
+//                     input.value = String(value); // Fix: ensure value is a string
+//                     form.appendChild(input);
+//                 });
+//                 document.body.appendChild(form);
+//                 form.submit();
+//                 document.body.removeChild(form);
+//             } else {
+//                 alert("eSewa payment initialization failed.");
+//             }
+//         } catch (err) {
+//             alert("Error connecting to eSewa.");
+//         } finally {
+//             setEsewaLoading(false);
+//         }
+//     };
+//
 //     return loading ? <Loading /> : <>
 //         <div className="col-12">
 //             <div className="row">
@@ -207,14 +250,14 @@ import { clearCart, setCart } from "@/store";
 import { Loading } from "@/components";
 import http from "@/http";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
 
 export const Cart: React.FC = () => {
     const cart: CartData = useSelector((state: any) => state.cart.value);
-    const user = useSelector((state: any) => state.user.value); // Assumes you store user in Redux
     const [totalQty, setTotalQty] = useState<number>(0);
     const [totalPrice, setTotalPrice] = useState<number>(0);
     const [loading, setLoading] = useState<boolean>(false);
+    const [paymentMethod, setPaymentMethod] = useState<string>("cod");
+    const [esewaLoading, setEsewaLoading] = useState(false);
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -301,61 +344,46 @@ export const Cart: React.FC = () => {
             });
     };
 
-    const handleDomiPay = async () => {
-        if (!user || !user._id) {
-            toast.error("Please log in to continue.");
-            return;
-        }
-
-        const orderId = `ORD-${Date.now()}`;
+    const handleEsewaCheckout = async () => {
+        setEsewaLoading(true);
         try {
-            const response = await http.post("/payments/domi/create", {
-                orderId,
-                userId: user._id,
+            // Prepare order data
+            let data = [];
+            for (let i in cart) {
+                data.push({
+                    productId: i,
+                    qty: cart[i].qty,
+                });
+            }
+            // Call backend to get eSewa form fields
+            const res = await http.post("/payments/domi/create", {
                 amount: totalPrice,
+                orderId: `ECOM-${Date.now()}`,
+                userId: null // set userId if available
             });
-
-            const paymentData = await response.data;
-
-            // Submit eSewa form per ePay v2
-            const {esewa, orderNumber} = paymentData;
-
-            if (esewa?.action && esewa?.fields) {
-                try {
-                    // Store order info in sessionStorage for potential use after redirect
-                    sessionStorage.setItem('esewa_order', JSON.stringify({
-                        orderId,
-                        orderNumber,
-                        transaction_uuid: esewa.fields.transaction_uuid,
-                        total_amount: esewa.fields.total_amount
-                    }));
-                } catch (_) {
-                    // ignore storage errors
-                }
-
-                // Build and submit a form to eSewa
-                const form = document.createElement('form');
-                form.method = esewa.method || 'POST';
+            const { esewa } = res.data;
+            if (esewa && esewa.action && esewa.fields) {
+                // Build and submit form
+                const form = document.createElement("form");
+                form.method = esewa.method || "POST";
                 form.action = esewa.action;
-
                 Object.entries(esewa.fields).forEach(([key, value]) => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
+                    const input = document.createElement("input");
+                    input.type = "hidden";
                     input.name = key;
-                    input.value = String(value);
+                    input.value = String(value); // Fix: ensure value is a string
                     form.appendChild(input);
                 });
-
                 document.body.appendChild(form);
                 form.submit();
+                document.body.removeChild(form);
             } else {
-                throw new Error('Invalid eSewa payment initialization response');
+                alert("eSewa payment initialization failed.");
             }
-
-
         } catch (err) {
-            console.error("DomiPay Error:", err);
-            toast.error("Something went wrong while connecting to DomiPay.");
+            alert("Error connecting to eSewa.");
+        } finally {
+            setEsewaLoading(false);
         }
     };
 
@@ -446,15 +474,36 @@ export const Cart: React.FC = () => {
                                             >
                                                 Clear Cart
                                             </button>
-                                            <button
-                                                className="btn btn-outline-success me-3"
-                                                onClick={handleCheckout}
-                                            >
-                                                Checkout
-                                            </button>
-                                            <button className="btn btn-primary" onClick={handleDomiPay}>
-                                                Pay with Domi
-                                            </button>
+                                            <div style={{ display: 'inline-block', marginRight: '1rem' }}>
+                                                <label>
+                                                    <input
+                                                        type="radio"
+                                                        name="paymentMethod"
+                                                        value="cod"
+                                                        checked={paymentMethod === "cod"}
+                                                        onChange={() => setPaymentMethod("cod")}
+                                                    />
+                                                    Cash on Delivery
+                                                </label>
+                                                <label style={{ marginLeft: '1rem' }}>
+                                                    <input
+                                                        type="radio"
+                                                        name="paymentMethod"
+                                                        value="esewa"
+                                                        checked={paymentMethod === "esewa"}
+                                                        onChange={() => setPaymentMethod("esewa")}
+                                                    />
+                                                    Pay with eSewa
+                                                </label>
+                                            </div>
+                                            {paymentMethod === "cod" ? (
+                                                <button className="btn btn-outline-success"
+                                                    onClick={handleCheckout}>Checkout</button>
+                                            ) : (
+                                                <button className="btn btn-success" onClick={handleEsewaCheckout} disabled={esewaLoading}>
+                                                    {esewaLoading ? "Redirecting..." : "Pay with eSewa"}
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 ) : (

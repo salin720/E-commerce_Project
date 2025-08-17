@@ -7,13 +7,15 @@ export default function PaymentSuccess() {
     const [searchParams] = useSearchParams();
 
     useEffect(() => {
-        const txnId = searchParams.get("txn_id");
-        if (!txnId) {
-            setStatus("❌ No transaction ID found.");
+        // eSewa returns: ?amt=1000&pid=ECOM-...&refId=... (or txn_id/rid)
+        const txnId = searchParams.get("txn_id") || searchParams.get("refId") || searchParams.get("rid");
+        const amt = searchParams.get("amt");
+        const pid = searchParams.get("pid");
+        if (!txnId || !amt || !pid) {
+            setStatus("❌ Missing payment details in URL.");
             return;
         }
-
-        fetch(`/api/payments/domi/verify?txn_id=${txnId}`)
+        fetch(`/api/payments/domi/verify?txn_id=${txnId}&amt=${amt}&pid=${pid}`)
             .then((res) => res.json())
             .then((data) => {
                 setStatus(data.success ? "✅ Payment Successful!" : "❌ Payment Failed.");

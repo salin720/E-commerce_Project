@@ -47,7 +47,7 @@ export const AppRouter: React.FC= () => {
 
                 <Route path="/orders" element={<PrivateRoute element={<Pages.Orders.List />} />} />
 
-                <Route path="login" element={<Pages.Auth.Login />} />
+                <Route path="/login" element={<Pages.Auth.Login />} />
             </Route>
         </Routes>
     </BrowserRouter>

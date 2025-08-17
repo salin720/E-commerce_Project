@@ -20,11 +20,9 @@ export const AppRouter: React.FC= () => {
                 <Route path="/cart" element={<PrivateRoute element={<Pages.Front.Cart />} />} />
                 <Route path="/profile" element={<PrivateRoute element={<Pages.Profile.UserProfile />} />} />
                 <Route path="/payment/success" element={<PaymentSuccess />} />
+                <Route path="/payment-success" element={<PaymentSuccess />} />
 
             </Route>
         </Routes>
     </BrowserRouter>
 }
-
-
-
