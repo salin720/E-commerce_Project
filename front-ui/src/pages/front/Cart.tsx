@@ -355,12 +355,10 @@ export const Cart: React.FC = () => {
                     qty: cart[i].qty,
                 });
             }
-            // Call backend to get eSewa form fields
-            const res = await http.post("/payments/domi/create", {
-                amount: totalPrice,
-                orderId: `ECOM-${Date.now()}`,
-                userId: null // set userId if available
-            });
+
+           const res=  await http.post("/payments/domi/create", { cart: data });
+            dispatch(clearCart());
+
             const { esewa } = res.data;
             if (esewa && esewa.action && esewa.fields) {
                 // Build and submit form
