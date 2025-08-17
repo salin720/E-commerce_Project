@@ -28,7 +28,7 @@ exports.createPayment = async (req, res) => {
 
         // Signature
         const signed_field_names = 'total_amount,transaction_uuid,product_code';
-        const signaturePayload = "total_amount=" + amount + ",transaction_uuid=" + order._id + ",product_code=EPAYTEST";
+        const signaturePayload = "total_amount=" + amount + ",transaction_uuid=" + order._id.toString() + ",product_code=EPAYTEST";
 
         const signature = crypto
             .createHmac('sha256', "8gBm/:&EnhH.1/q")
@@ -39,7 +39,7 @@ exports.createPayment = async (req, res) => {
         const action = baseUrl + "/epay/main/v2/form";
 
         const payload = {
-            orderId: order._id,
+            orderId: order._id.toString(),
             esewa: {
                 action,
                 method: 'POST',
@@ -47,7 +47,7 @@ exports.createPayment = async (req, res) => {
                     //   TODO - Add more fields as needed
                     amount: amount.toString(), // required by eSewa
                     total_amount: amount.toString(), // required by eSewa
-                    transaction_uuid: order._id, // unique per transaction
+                    transaction_uuid: order._id.toString(), // unique per transaction
                     product_code: "EPAYTEST", // set to orderId or your product code
                     product_service_charge: "0",
                     product_delivery_charge: "0",
@@ -65,8 +65,8 @@ exports.createPayment = async (req, res) => {
         try {
             // Create local payment record
             await Payment.create({
-                orderId,
-                userId,
+                orderId:order._id.toString(),
+                userId: req.user._id,
                 amount,
                 status: "Pending"
             });
