@@ -27,10 +27,15 @@ exports.createPayment = async (req, res) => {
                 action,
                 method: 'POST',
                 fields: {
+                    //   TODO - Add more fields as needed
                     amount: amount.toString(),
                     total_amount: amount.toString(),
-                    success_url,
-                    failure_url,
+                    transaction_uuid: orderId,
+                    product_code: productId,
+                    product_service_charge: "0",
+                    product_delivery_charge: "0",
+                    success_url: success_url,
+                    failure_url: failure_url,
                     signed_field_names,
                     signature,
                 },
