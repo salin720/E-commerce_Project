@@ -11,7 +11,7 @@ export const chatWithAI = async (req, res) => {
         if (!message || message.length < 2) {
             return res.json({ reply: "Please ask something meaningful." });
         }
-
+//
         // 📦 fetch products from DB
         const products = await Product.find().limit(20);
 
