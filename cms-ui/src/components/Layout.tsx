@@ -11,6 +11,7 @@ import {fromStorage, removeStorage} from "@/library/function"
 import http from "@/http"
 import {setUser} from "@/store"
 import {Loading} from "./Loading"
+import { Outlet } from "react-router-dom"
 
 export const Layout: React.FC = () => {
     const user: UserType = useSelector((state: any) => state.user.value)
@@ -40,5 +41,16 @@ export const Layout: React.FC = () => {
         }
     }, [user])
 
-    return loading ? <Loading /> : <AppNav />
+    return loading ? <Loading /> : (
+        <div className="d-flex">
+            <AppNav />
+            <main
+                className="flex-grow-1"
+                style={{ marginLeft: "250px", padding: "20px", minHeight: "100vh", backgroundColor: "#f8f9fa" }}
+            >
+                <Outlet />
+            </main>
+        </div>
+    )
+
 }
