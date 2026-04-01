@@ -1,5 +1,4 @@
 const {Router} = require('express')
-const aiRoutes = require('./aiRoutes');
 const authRoutes = require('./auth.routes')
 const profileRoutes = require('./profile.routes')
 const cmsRoutes = require('./cms')
@@ -9,9 +8,6 @@ const {DataNotFound} = require("@/library/functions");
 
 
 const router = Router()
-
-router.use('/ai', require('./aiRoutes'));
-// router.use('/ai', aiRoutes);
 
 router.use('/auth', authRoutes)
 
