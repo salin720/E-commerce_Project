@@ -19,4 +19,7 @@ router.use('/products', ProductRoutes)
 router.use('/reviews', ReviewRoutes)
 router.use('/orders', OrderRoutes)
 
+const AnalyticsRoutes = require('./analytics.routes')
+router.use('/analytics', AnalyticsRoutes)
+
 module.exports = router
