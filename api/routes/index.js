@@ -5,6 +5,7 @@ const cmsRoutes = require('./cms')
 const frontRoutes = require('./front')
 const {auth, cmsUsers} = require('@/library/middlewares')
 const {DataNotFound} = require("@/library/functions");
+const paymentRoutes = require("./payment.routes");
 
 
 const router = Router()
@@ -16,6 +17,8 @@ router.use('/profile', auth,  profileRoutes)
 router.use('/cms', auth, cmsUsers, cmsRoutes)
 
 router.use(frontRoutes)
+
+router.use("/payment", paymentRoutes);
 
 // Must be last
 router.use((req,res,next) => {
