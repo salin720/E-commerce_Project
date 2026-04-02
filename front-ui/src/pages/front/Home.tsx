@@ -1,122 +1,69 @@
 import slider1 from "/slider-1.jpg"
 import slider2 from "/slider-2.jpg"
 import slider3 from "/slider-3.jpg"
-
-import {Carousel} from "react-bootstrap"
-import {ProductData} from "@/library/interfaces.ts";
-import {useEffect, useState} from "react";
+import {Carousel, Col, Row} from "react-bootstrap"
+import {ProductData, UserType} from "@/library/interfaces.ts"
+import {useEffect, useState} from "react"
 import http from "@/http"
-import {Loading, ProductSection} from "@/components";
+import {Loading, ProductSection} from "@/components"
+import { useSelector } from "react-redux"
 
 export const Home:React.FC = () => {
+    const user: UserType = useSelector((state: any) => state.user.value)
     const [featured, setFeatured] = useState<ProductData[]>([])
     const [latest, setLatest] = useState<ProductData[]>([])
     const [topSelling, setTopSelling] = useState<ProductData[]>([])
+    const [recommended, setRecommended] = useState<ProductData[]>([])
+    const [recentlyViewed, setRecentlyViewed] = useState<ProductData[]>([])
     const [loading, setLoading] = useState<boolean>(true)
 
     useEffect(() => {
-        setLoading(true);
-
-        Promise.all([
+        setLoading(true)
+        const requests: Promise<any>[] = [
             http.get('/products/featured'),
             http.get('/products/latest'),
-            http.get('/products/top-selling')
-        ])
-            // .then(([fRes, lRes, tRes]) => {
-            //     setFeatured(fRes.data.featured || []);
-            //     setLatest(lRes.data.latest || []);
-            //     setTopSelling(tRes.data.topSelling || []);
-            // })
-
-            // .then(([fRes, lRes, tRes]) => {
-            //                 setFeatured(fRes.data?.data || [])
-            //                 setLatest(lRes.data?.data || [])
-            //                 setTopSelling(tRes.data?.data || [])
-            //                 setLoading(false)
-            // })
-
-            .then(([fRes, lRes, tRes]) => {
-                setFeatured(fRes.data?.featured || fRes.data?.data || []);
-                setLatest(lRes.data?.latest || lRes.data?.data || []);
-                setTopSelling(tRes.data?.topSelling || tRes.data?.data || []);
+            http.get('/recommendations/trending'),
+        ]
+        if (user) {
+            requests.push(http.get('/recommendations/personalized'))
+            requests.push(http.get('/recommendations/recently-viewed'))
+        }
+        Promise.all(requests)
+            .then((responses: any[]) => {
+                const [fRes, lRes, tRes, pRes, rRes] = responses
+                setFeatured(fRes.data?.featured || [])
+                setLatest(lRes.data?.latest || [])
+                setTopSelling(tRes.data?.products || tRes.data?.topSelling || [])
+                setRecommended(pRes?.data?.products || [])
+                setRecentlyViewed(rRes?.data?.products || [])
             })
-
-
             .catch(() => {})
-            .finally(() => {
-                setLoading(false);
-            });
-    }, []);
+            .finally(() => setLoading(false))
+    }, [user])
 
+    return loading ? <Loading /> : <div className="col-12">
+        <main className="row gx-0">
+            <div className="col-12 hero-shell px-0">
+                <Carousel className="hero-carousel">
+                    <Carousel.Item><img src={slider1} className="w-100 hero-banner" /></Carousel.Item>
+                    <Carousel.Item><img src={slider2} className="w-100 hero-banner" /></Carousel.Item>
+                    <Carousel.Item><img src={slider3} className="w-100 hero-banner" /></Carousel.Item>
+                </Carousel>
+            </div>
 
-    return loading ? <Loading /> : <>
-        <div className="col-12">
-            <main className="row">
+            <div className="col-12 px-3 px-lg-4 py-4">
+                <Row className="g-3 mb-2">
+                    <Col md={4}><div className="mini-feature-card"><i className="fas fa-shield-alt"></i><div><h6>Trusted shopping</h6><p>Safe checkout, genuine products and verified sellers.</p></div></div></Col>
+                    <Col md={4}><div className="mini-feature-card"><i className="fas fa-bolt"></i><div><h6>Fast discovery</h6><p>Dynamic search, smart recommendations and trending picks.</p></div></div></Col>
+                    <Col md={4}><div className="mini-feature-card"><i className="fas fa-truck"></i><div><h6>Delivery visibility</h6><p>Track orders, payment status and shipping progress clearly.</p></div></div></Col>
+                </Row>
 
-                <div className="col-12 px-0">
-                    <Carousel className="w-100">
-                        <Carousel.Item>
-                            <img src={slider1} className="w-100" />
-                        </Carousel.Item>
-                        <Carousel.Item>
-                            <img src={slider2} className="w-100" />
-                        </Carousel.Item>
-                        <Carousel.Item>
-                            <img src={slider3} className="w-100" />
-                        </Carousel.Item>
-                    </Carousel>
-                </div>
-
+                {user && <ProductSection data={recommended} title="Recommended For You" emptyText="Start browsing products and your personal recommendations will appear here." />}
+                {user && <ProductSection data={recentlyViewed} title="Because You Viewed" size="sm" emptyText="Products you open will appear here for quick access." />}
                 <ProductSection data={featured} title="Featured Products" />
-                <div className="col-12">
-                    <hr/>
-                </div>
-
-                <ProductSection data={latest} title="Latest Products" />
-                <div className="col-12">
-                    <hr/>
-                </div>
-
-                <ProductSection data={topSelling} title="Top Sellings" />
-                <div className="col-12">
-                    <hr/>
-                </div>
-
-                <div className="col-12 py-3 bg-light d-sm-block d-none">
-                    <div className="row">
-                        <div className="col-lg-3 col ms-auto large-holder">
-                            <div className="row">
-                                <div className="col-auto ms-auto large-icon">
-                                    <i className="fas fa-money-bill"></i>
-                                </div>
-                                <div className="col-auto me-auto large-text">
-                                    Best Price
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-lg-3 col large-holder">
-                            <div className="row">
-                                <div className="col-auto ms-auto large-icon">
-                                    <i className="fas fa-truck-moving"></i>
-                                </div>
-                                <div className="col-auto me-auto large-text">
-                                    Fast Delivery
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-lg-3 col me-auto large-holder">
-                            <div className="row">
-                                <div className="col-auto ms-auto large-icon">
-                                    <i className="fas fa-check"></i>
-                                </div>
-                                <div className="col-auto me-auto large-text">
-                                    Genuine Products
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </main>
-        </div>
-    </>
+                <ProductSection data={latest} title="Latest Arrivals" />
+                <ProductSection data={topSelling} title="Trending Now" />
+            </div>
+        </main>
+    </div>
 }

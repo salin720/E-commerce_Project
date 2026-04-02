@@ -1,315 +1,214 @@
-import "bootstrap/dist/css/bootstrap.min.css";
-import "@fortawesome/fontawesome-free/css/all.min.css";
-import "react-toastify/dist/ReactToastify.css";
-import "@/styles/style.css";
+import "bootstrap/dist/css/bootstrap.min.css"
+import "@fortawesome/fontawesome-free/css/all.min.css"
+import "react-toastify/dist/ReactToastify.css"
+import "@/styles/style.css"
 
-import { CartData, CatBrandData, UserType } from "@/library/interfaces";
-import { useDispatch, useSelector } from "react-redux";
-import { useEffect, useState } from "react";
-import { fromStorage, removeStorage } from "@/library/function";
-import http from "@/http";
-import { clearUser, setUser } from "@/store";
-import { Loading } from "./Loading";
-import { Link, Outlet, useNavigate } from "react-router-dom";
-import { Button, NavDropdown } from "react-bootstrap";
+import { CartData, CatBrandData, SearchSuggestion, UserType } from "@/library/interfaces"
+import { useDispatch, useSelector } from "react-redux"
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react"
+import { fromStorage, removeStorage, imgUrl } from "@/library/function"
+import http from "@/http"
+import { clearUser, setUser } from "@/store"
+import { Loading } from "./Loading"
+import { Link, Outlet, useNavigate } from "react-router-dom"
+import { NavDropdown } from "react-bootstrap"
 
 export const Layout: React.FC = () => {
-    const user: UserType = useSelector((state: any) => state.user.value);
-    const cart: CartData = useSelector((state: any) => state.cart.value);
+    const user: UserType = useSelector((state: any) => state.user.value)
+    const cart: CartData = useSelector((state: any) => state.cart.value)
+    const [categories, setCategories] = useState<CatBrandData[]>([])
+    const [brands, setBrands] = useState<CatBrandData[]>([])
+    const [loading, setLoading] = useState<boolean>(true)
+    const [totalQty, setTotalQty] = useState<number>(0)
+    const [totalPrice, setTotalPrice] = useState<number>(0)
+    const [term, setTerm] = useState<string>("")
+    const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
+    const [showSuggestions, setShowSuggestions] = useState(false)
+    const [wishlistCount, setWishlistCount] = useState<number>(0)
+    const searchWrapRef = useRef<HTMLFormElement | null>(null)
 
-    const [categories, setCategories] = useState<CatBrandData[]>([]);
-    const [brands, setBrands] = useState<CatBrandData[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [totalQty, setTotalQty] = useState<number>(0);
-    const [totalPrice, setTotalPrice] = useState<number>(0);
-
-    const dispatch = useDispatch();
-    const navigate = useNavigate();
+    const dispatch = useDispatch()
+    const navigate = useNavigate()
 
     useEffect(() => {
-        setLoading(true);
         Promise.all([http.get("/categories"), http.get("/brands")])
             .then(([{ data: cData }, { data: bData }]) => {
-                setCategories(cData);
-                setBrands(bData);
+                setCategories(cData)
+                setBrands(bData)
             })
-            .catch(() => {})
-            .finally(() => setLoading(false));
-    }, []);
+            .finally(() => setLoading(false))
+    }, [])
 
     useEffect(() => {
-        setLoading(true);
         if (!user) {
-            const token = fromStorage("m3pmftoken");
-
+            const token = fromStorage("m3pmftoken")
             if (token) {
-                http
-                    .get("/profile/details")
-                    .then(({ data }) => {
-                        dispatch(setUser(data));
-                    })
-                    .catch(() => {
-                        removeStorage("m3pmftoken");
-                    })
-                    .finally(() => setLoading(false));
-            } else {
-                setLoading(false);
+                setLoading(true)
+                http.get("/profile/details")
+                    .then(({ data }) => dispatch(setUser(data)))
+                    .catch(() => removeStorage("m3pmftoken"))
+                    .finally(() => setLoading(false))
             }
-        } else {
-            setLoading(false);
         }
-    }, [user]);
+    }, [user, dispatch])
 
     useEffect(() => {
-        let tq = 0,
-            tp = 0;
+        let tq = 0, tp = 0
+        Object.keys(cart || {}).forEach(id => {
+            tq += Number(cart[id]?.qty) || 0
+            tp += Number(cart[id]?.total) || 0
+        })
+        setTotalQty(tq)
+        setTotalPrice(tp)
+    }, [cart])
 
-        if (cart && typeof cart === "object" && Object.keys(cart).length > 0) {
-            for (let id in cart) {
-                const item = cart[id];
-                const qty = Number(item?.qty) || 0;
-                const total = Number(item?.total) || 0;
-                tq += qty;
-                tp += total;
+    useEffect(() => {
+        const syncWishlist = () => {
+            const saved = localStorage.getItem("wishlist")
+            const localWishlist = saved ? JSON.parse(saved) : []
+            setWishlistCount(localWishlist.length)
+        }
+        syncWishlist()
+        window.addEventListener('storage', syncWishlist)
+        return () => window.removeEventListener('storage', syncWishlist)
+    }, [])
+
+    useEffect(() => {
+        if (!term.trim()) {
+            setSuggestions([])
+            return
+        }
+        const timer = setTimeout(() => {
+            http.get('/products/autocomplete', { params: { term } })
+                .then(({ data }) => {
+                    setSuggestions(data?.suggestions || [])
+                    setShowSuggestions(true)
+                })
+                .catch(() => setSuggestions([]))
+        }, 220)
+        return () => clearTimeout(timer)
+    }, [term])
+
+    useEffect(() => {
+        const close = (event: MouseEvent) => {
+            if (searchWrapRef.current && !searchWrapRef.current.contains(event.target as Node)) {
+                setShowSuggestions(false)
             }
         }
-
-        setTotalQty(tq);
-        setTotalPrice(tp);
-    }, [cart]);
+        document.addEventListener('mousedown', close)
+        return () => document.removeEventListener('mousedown', close)
+    }, [])
 
     const handleLogout = () => {
-        removeStorage("m3pmftoken");
-        dispatch(clearUser());
-    };
+        removeStorage("m3pmftoken")
+        dispatch(clearUser())
+        navigate("/")
+    }
 
-    return loading ? (
-        <Loading />
-    ) : (
-        <>
-            <div className="container-fluid">
-                <div className="row min-vh-100">
-                    <div className="col-12">
-                        {/* Header */}
-                        <header className="row">
-                            <div className="col-12 bg-dark py-2 d-md-block d-none">
-                                <div className="row">
-                                    <div className="col-auto me-auto">
-                                        <ul className="top-nav">
-                                            <li>
-                                                <a href="tel:+977-9765220864">
-                                                    <i className="fa fa-phone-square me-2"></i>
-                                                    +977-9765220864
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="mailto:quickcart@gmail.com">
-                                                    <i className="fa fa-envelope me-2"></i>
-                                                    quickcart@gmail.com
-                                                </a>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    <div className="col-auto">
-                                        <ul className="top-nav">
-                                            {user ? (
-                                                <>
-                                                    <li>
-                                                        <Link to="/profile">
-                                                            <i className="fas fa-user-circle me-2"></i>
-                                                            {user.name}
-                                                        </Link>
-                                                    </li>
-                                                    <li>
-                                                        <Button
-                                                            variant="link"
-                                                            type="button"
-                                                            className="link-light text-decoration-none p-0"
-                                                            size="sm"
-                                                            onClick={handleLogout}
-                                                        >
-                                                            <i className="fas fa-sign-out-alt me-2"></i>
-                                                            Logout
-                                                        </Button>
-                                                    </li>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <li>
-                                                        <Link to="/register">
-                                                            <i className="fas fa-user-edit me-2"></i>
-                                                            Register
-                                                        </Link>
-                                                    </li>
-                                                    <li>
-                                                        <Link to="/login">
-                                                            <i className="fas fa-sign-in-alt me-2"></i>
-                                                            Login
-                                                        </Link>
-                                                    </li>
-                                                </>
-                                            )}
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
+    const handleSearch = (event?: FormEvent) => {
+        event?.preventDefault()
+        const q = term.trim()
+        if (!q) return
+        navigate(`/search?term=${encodeURIComponent(q)}`)
+        setShowSuggestions(false)
+    }
 
-                            <div className="col-12 bg-white pt-4">
-                                <div className="row">
-                                    <div className="col-lg-auto ms-3">
-                                        <div className="site-logo text-center text-lg-left">
-                                            <Link to="/">
-                                                <img
-                                                    src="/Logo.png"
-                                                    alt="Quick Cart Logo"
-                                                    className="img-fluid"
-                                                    style={{ maxHeight: "60px" }}
-                                                />
-                                            </Link>
-                                        </div>
-                                    </div>
-                                    <div className="col-lg-5 mx-auto mt-4 mt-lg-0">
-                                        <form action="#">
-                                            <div className="form-group">
-                                                <div className="input-group">
-                                                    <input
-                                                        type="search"
-                                                        className="form-control border-dark"
-                                                        placeholder="Search..."
-                                                        required
-                                                        onKeyUp={({ target }) => {
-                                                            // @ts-ignore
-                                                            navigate(`/search?term=${target.value}`);
-                                                        }}
-                                                    />
-                                                    <button className="btn btn-outline-dark">
-                                                        <i className="fas fa-search"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    </div>
-                                    <div className="col-lg-auto text-center text-lg-left header-item-holder">
-                                        <a href="#" className="header-item">
-                                            <i className="fas fa-heart-circle-check me-2"></i>
-                                            <span id="header-favorite">0</span>
-                                        </a>
-                                        <Link to="/cart" className="header-item">
-                                            <i className="fas fa-cart-shopping me-2"></i>
-                                            <span id="header-qty" className="me-3">{totalQty}</span>
-                                            <i className="fas fa-coins me-2"></i>
-                                            <span id="header-price">Rs. {totalPrice}</span>
-                                        </Link>
-                                    </div>
-                                </div>
+    const money = useMemo(() => `Rs. ${totalPrice.toFixed(2)}`, [totalPrice])
+    const avatarUrl = user?.avatar ? (user.avatar.startsWith('/image/') ? `${import.meta.env.VITE_API_URL}${user.avatar}` : imgUrl(user.avatar)) : '/avatar.png'
 
-                                <div className="row">
-                                    <nav className="navbar navbar-expand-lg navbar-light bg-white col-12">
-                                        <button
-                                            className="navbar-toggler d-lg-none border-0"
-                                            type="button"
-                                            data-bs-toggle="collapse"
-                                            data-bs-target="#mainNav"
-                                        >
-                                            <span className="navbar-toggler-icon"></span>
-                                        </button>
-                                        <div className="collapse navbar-collapse" id="mainNav">
-                                            <ul className="navbar-nav mx-auto mt-2 mt-lg-0">
-                                                <li className="nav-item active">
-                                                    <Link className="nav-link" to="/">Home</Link>
-                                                </li>
-                                                <NavDropdown title="Categories">
-                                                    {categories.map(cat => (
-                                                        <Link key={cat._id} to={`/categories/${cat._id}`} className="dropdown-item">{cat.name}</Link>
-                                                    ))}
-                                                </NavDropdown>
-                                                <NavDropdown title="Brands">
-                                                    {brands.map(brand => (
-                                                        <Link key={brand._id} to={`/brands/${brand._id}`} className="dropdown-item">{brand.name}</Link>
-                                                    ))}
-                                                </NavDropdown>
-                                            </ul>
-                                        </div>
-                                    </nav>
-                                </div>
-                            </div>
-                        </header>
-                    </div>
-
-                    {/* Main Content */}
-                    <Outlet />
-
-                    {/* Footer */}
-                    <div className="col-12 align-self-end">
-                        <footer className="row">
-                            <div className="col-12 bg-dark text-white pt-5">
-                                <div className="row">
-                                    <div className="col-lg-2 col-sm-4 text-center text-sm-left mb-sm-0 mb-3">
-                                        <div className="footer-logo mb-2">
-                                            <Link to="/" className="text-white h5 text-decoration-none">Quick Cart</Link>
-                                        </div>
-                                        <address className="mb-2">
-                                            Kandaghari 09<br />Kathmandu, Nepal
-                                        </address>
-                                        <div>
-                                            <a href="#" className="social-icon me-2 text-white"><i className="fab fa-facebook-f"></i></a>
-                                            <a href="#" className="social-icon me-2 text-white"><i className="fab fa-twitter"></i></a>
-                                            <a href="#" className="social-icon me-2 text-white"><i className="fab fa-pinterest-p"></i></a>
-                                            <a href="#" className="social-icon me-2 text-white"><i className="fab fa-instagram"></i></a>
-                                            <a href="#" className="social-icon text-white"><i className="fab fa-youtube"></i></a>
-                                        </div>
-                                    </div>
-                                    <div className="col-lg-3 col-sm-8 text-center text-sm-left mb-sm-0 mb-3">
-                                        <h4>Who are we?</h4>
-                                        <p>We are a customer-driven e-commerce company committed to providing quality products and seamless shopping experiences. Our platform connects buyers and sellers with ease, offering convenience, security, and reliability. With a focus on innovation and user satisfaction, we aim to simplify online shopping for everyone.</p>
-                                    </div>
-                                    <div className="col-lg-2 col-sm-3 col-5 ms-lg-auto ms-sm-0 ms-auto mb-sm-0 mb-3">
-                                        <h5 className="mb-3">Quick Links</h5>
-                                        <ul className="footer-nav list-unstyled">
-                                            <li><a href="#" className="text-white text-decoration-none">Home</a></li>
-                                            <li><a href="#" className="text-white text-decoration-none">Contact Us</a></li>
-                                            <li><a href="#" className="text-white text-decoration-none">About Us</a></li>
-                                            <li><a href="#" className="text-white text-decoration-none">Privacy Policy</a></li>
-                                            <li><a href="#" className="text-white text-decoration-none">Terms & Conditions</a></li>
-                                        </ul>
-                                    </div>
-                                    <div className="col-lg-1 col-sm-2 col-4 me-auto mb-sm-0 mb-3">
-                                        <h5 className="mb-3">Help</h5>
-                                        <ul className="footer-nav list-unstyled">
-                                            <li><a href="#" className="text-white text-decoration-none">FAQs</a></li>
-                                            <li><a href="#" className="text-white text-decoration-none">Shipping</a></li>
-                                            <li><a href="#" className="text-white text-decoration-none">Returns</a></li>
-                                            <li><a href="#" className="text-white text-decoration-none">Track Order</a></li>
-                                            <li><a href="#" className="text-white text-decoration-none">Report Fraud</a></li>
-                                        </ul>
-                                    </div>
-                                    <div className="col-lg-3 col-sm-6 text-center text-sm-left">
-                                        <h5 className="mb-3">Newsletter</h5>
-                                        <form action="#">
-                                            <div className="mb-3">
-                                                <input type="email" className="form-control" placeholder="Enter your email..." required />
-                                            </div>
-                                            <div className="mb-3">
-                                                <button className="btn btn-outline-light text-uppercase w-100" type="submit">Subscribe</button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-
-                                {/* Copyright */}
-                                <div className="row mt-4">
-                                    <div className="col-12 text-center">
-                                        <hr className="border-light" />
-                                        <small className="text-light">
-                                            &copy; {new Date().getFullYear()} Quick Cart. All rights reserved.
-                                        </small>
-                                    </div>
-                                </div>
-                            </div>
-                        </footer>
+    return loading ? <Loading /> : (
+        <div className="container-fluid px-0 bg-site">
+            <header className="site-header sticky-top">
+                <div className="top-strip d-none d-md-block">
+                    <div className="container-fluid px-lg-4 d-flex justify-content-between py-2 text-white small">
+                        <div className="d-flex gap-3"><span><i className="fa fa-phone-square me-2"></i>+977-9765220864</span><span><i className="fa fa-envelope me-2"></i>quickcart@gmail.com</span></div>
+                        <div className="d-flex gap-3">
+                            {user ? <><Link to="/profile" className="text-white text-decoration-none">My Account</Link><button className="btn btn-link btn-sm text-white text-decoration-none p-0" onClick={handleLogout}>Logout</button></> : <><Link to="/login" className="text-white text-decoration-none">Login</Link><Link to="/register" className="text-white text-decoration-none">Register</Link></>}
+                        </div>
                     </div>
                 </div>
-            </div>
-        </>
-    );
-};
+
+                <div className="header-main bg-white shadow-sm">
+                    <div className="container-fluid px-lg-4 py-3">
+                        <div className="row align-items-center g-3">
+                            <div className="col-lg-2 col-md-3 col-12">
+                                <Link to="/" className="site-logo-real text-decoration-none">Quick <span>Cart</span></Link>
+                            </div>
+                            <div className="col-lg-7 col-md-6 col-12">
+                                <form onSubmit={handleSearch} className="search-shell" ref={searchWrapRef} onMouseLeave={() => setShowSuggestions(false)}>
+                                    <input
+                                        className="search-input-real"
+                                        value={term}
+                                        onChange={(e) => setTerm(e.target.value)}
+                                        onFocus={() => suggestions.length && setShowSuggestions(true)}
+                                        placeholder="Search for products, brands and categories"
+                                    />
+                                    <button className="search-btn-real" type="submit"><i className="fa fa-search"></i></button>
+                                    {showSuggestions && suggestions.length > 0 && (
+                                        <div className="search-dropdown-real">
+                                            {suggestions.map((item) => (
+                                                <button
+                                                    key={item._id}
+                                                    type="button"
+                                                    className="search-suggestion-item"
+                                                    onClick={() => {
+                                                        navigate(`/products/${item._id}`)
+                                                        setShowSuggestions(false)
+                                                    }}
+                                                >
+                                                    <img src={item.image ? imgUrl(item.image) : '/avatar.png'} alt={item.name} />
+                                                    <div className="text-start">
+                                                        <div className="fw-semibold">{item.name}</div>
+                                                        <div className="small text-muted">{item.brandName || item.categoryName || 'Quick Cart'}</div>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </form>
+                            </div>
+                            <div className="col-lg-3 col-md-3 col-12 d-flex justify-content-lg-end gap-2 flex-wrap align-items-center">
+                                <Link to="/profile" className="icon-pill text-decoration-none"><img src={avatarUrl} className="avatar-mini" /> <span>{user ? user.name.split(' ')[0] : 'Guest'}</span></Link>
+                                <button className="icon-pill" type="button"><i className="fas fa-heart me-2"></i>{wishlistCount}</button>
+                                <Link to="/cart" className="icon-pill text-decoration-none"><i className="fas fa-cart-shopping me-2"></i>{totalQty} • {money}</Link>
+                            </div>
+                        </div>
+
+                        <nav className="navbar navbar-expand-lg navbar-light mt-3 nav-real rounded-4 px-3">
+                            <button className="navbar-toggler d-lg-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"><span className="navbar-toggler-icon"></span></button>
+                            <div className="collapse navbar-collapse" id="mainNav">
+                                <ul className="navbar-nav mx-auto gap-lg-3">
+                                    <li className="nav-item"><Link className="nav-link" to="/">Home</Link></li>
+                                    <NavDropdown title="Categories">
+                                        {categories.map(cat => <Link key={cat._id} to={`/categories/${cat._id}`} className="dropdown-item">{cat.name}</Link>)}
+                                    </NavDropdown>
+                                    <NavDropdown title="Brands">
+                                        {brands.map(brand => <Link key={brand._id} to={`/brands/${brand._id}`} className="dropdown-item">{brand.name}</Link>)}
+                                    </NavDropdown>
+                                    <li className="nav-item"><Link className="nav-link" to="/profile">Orders & Account</Link></li>
+                                </ul>
+                            </div>
+                        </nav>
+                    </div>
+                </div>
+            </header>
+
+            <Outlet />
+
+            <footer className="footer-real mt-5">
+                <div className="container-fluid px-lg-4 py-5">
+                    <div className="row g-4">
+                        <div className="col-lg-4">
+                            <h4 className="footer-brand">Quick Cart</h4>
+                            <p className="text-white-50 mb-3">A modern marketplace with smart recommendations, dynamic product discovery, secure checkout and clear order tracking.</p>
+                            <div className="d-flex gap-3 text-white fs-5"><i className="fab fa-facebook-f"></i><i className="fab fa-instagram"></i><i className="fab fa-youtube"></i><i className="fab fa-x-twitter"></i></div>
+                        </div>
+                        <div className="col-lg-2 col-md-4"><h6>Shop</h6><ul className="footer-list"><li><Link to="/">Home</Link></li><li><Link to="/cart">Cart</Link></li><li><Link to="/profile">Orders</Link></li></ul></div>
+                        <div className="col-lg-3 col-md-4"><h6>Support</h6><ul className="footer-list"><li><a href="tel:+9779765220864">+977-9765220864</a></li><li><a href="mailto:quickcart@gmail.com">quickcart@gmail.com</a></li><li><span>Kathmandu, Nepal</span></li></ul></div>
+                        <div className="col-lg-3 col-md-4"><h6>Why Quick Cart</h6><ul className="footer-list"><li><span>Smart recommendations</span></li><li><span>eSewa & COD ordering</span></li><li><span>Track payments and delivery</span></li></ul></div>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    )
+}

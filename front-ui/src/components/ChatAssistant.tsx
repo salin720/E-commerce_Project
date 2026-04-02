@@ -131,17 +131,17 @@ const ChatAssistant: React.FC = () => {
                 >
                   <div className="small" style={{ whiteSpace: 'pre-wrap' }}>{message.text}</div>
 
-                  {message.products?.length > 0 && (
+                  {(message.products && message.products.length > 0) && (
                     <div className="mt-3">
-                      {message.products.map(product => (
+                      {message.products!.map((product: ProductData) => (
                         <MiniProductCard key={product._id} product={product} />
                       ))}
                     </div>
                   )}
 
-                  {message.suggestions?.length ? (
+                  {(message.suggestions && message.suggestions.length) ? (
                     <div className="mt-2 d-flex flex-wrap gap-2">
-                      {message.suggestions.map(suggestion => (
+                      {message.suggestions!.map((suggestion: string) => (
                         <button
                           key={suggestion}
                           type="button"

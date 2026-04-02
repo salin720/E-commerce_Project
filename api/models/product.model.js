@@ -11,7 +11,10 @@ const Product = model('Product', new Schema({
     brandId: {type: Schema.Types.ObjectId, required: true, ref: 'Brand'},
     images: [stringRequired],
     status: booleanTrue,
-    featured: {type: Boolean, default: false}, 
+    featured: {type: Boolean, default: false},
+    stock: {type: Number, default: 0},
+    totalViews: {type: Number, default: 0},
+    totalSold: {type: Number, default: 0},
 }, modelConfig))
 
 module.exports = Product

@@ -19,11 +19,8 @@ export const Edit: React.FC<{user: UserType}> = ({user}) => {
         validationSchema: ProfileFormValidation,
         onSubmit: (data, {setSubmitting}) => {
             http.patch('/profile/update', data)
-                .then(() => {
-                    return http.get(`/profile/details`)
-                })
-                .then(() => {
-                    dispatch(setUser(data))
+                .then(({ data: resp }) => {
+                    dispatch(setUser(resp.user || { ...user, ...data }))
                 })
                 .catch(({response: {data}}) => {
                     if(data?.validation){
