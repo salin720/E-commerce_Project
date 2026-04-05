@@ -7,33 +7,32 @@ export const About: React.FC = () => {
                 <div className="section-heading-centered mb-4 mb-lg-5">
                     <div className="section-kicker">About Quick Cart</div>
                     <h2>Modern shopping with trust, clarity, and dependable support</h2>
-                    <p className="text-muted mb-0">Quick Cart is designed to make product discovery easier, order tracking clearer, and online payments safer for every customer.</p>
+                    <p className="text-muted mb-0">Quick Cart is built to make online shopping easier, safer, and more transparent for every customer.</p>
                 </div>
 
                 <div className="row g-4 align-items-stretch">
-                    <div className="col-lg-7">
-                        <div className="about-info-card h-100 about-balanced-card">
-                            <h5 className="mb-3">Why Quick Cart stands out</h5>
-                            <p>Quick Cart is a user-friendly e-commerce platform built to help customers browse confidently, compare products clearly, and complete orders smoothly. From featured products to detailed product insights, every part of the interface is designed to feel simple, fast, and practical.</p>
-                            <p>Our website combines secure checkout, same-category comparison, order tracking, payment monitoring, and helpful rating insights in one place. Customers can quickly understand product value, review pricing trends, and choose the option that fits them best.</p>
-                            <p>On the management side, Quick Cart supports a structured CMS panel for products, orders, customers, reviews, and payment records. This makes the system not only attractive for users, but also efficient for administrators managing a real online marketplace.</p>
+                    <div className="col-lg-8">
+                        <div className="about-info-card about-balanced-card h-100">
+                            <h5 className="mb-3">Why customers choose Quick Cart</h5>
+                            <p>Quick Cart is a smart and user-friendly marketplace where customers can discover products quickly, compare options clearly, and shop with confidence. Our platform focuses on clean design, simple navigation, and secure checkout so that buying online feels smooth from start to finish.</p>
+                            <p>We provide detailed product cards, same-category comparisons, clear score insights, price movement indicators, order tracking, and reliable payment support. This gives customers a better understanding of product value before purchase and a more professional experience after checkout.</p>
                             <div className="about-feature-grid mt-4">
-                                <div className="about-feature-pill"><i className="fa-solid fa-shield-heart"></i><span>Secure eSewa & COD checkout</span></div>
-                                <div className="about-feature-pill"><i className="fa-solid fa-chart-line"></i><span>Clear score and price insights</span></div>
-                                <div className="about-feature-pill"><i className="fa-solid fa-truck-fast"></i><span>Simple order tracking flow</span></div>
-                                <div className="about-feature-pill"><i className="fa-solid fa-headset"></i><span>Responsive customer support</span></div>
+                                <div className="about-feature-pill"><i className="fa-solid fa-shield-heart"></i><span>Secure eSewa and COD checkout</span></div>
+                                <div className="about-feature-pill"><i className="fa-solid fa-chart-line"></i><span>Smart score and price insights</span></div>
+                                <div className="about-feature-pill"><i className="fa-solid fa-scale-balanced"></i><span>Clear same-category comparison</span></div>
+                                <div className="about-feature-pill"><i className="fa-solid fa-truck-fast"></i><span>Simple order and payment tracking</span></div>
                             </div>
                         </div>
                     </div>
-                    <div className="col-lg-5 d-flex flex-column gap-4">
-                        <div className="about-info-card about-balanced-card flex-grow-1">
+                    <div className="col-lg-4 d-flex flex-column gap-4">
+                        <div className="about-info-card about-balanced-card">
                             <h5 className="mb-3">Customer Benefits</h5>
                             <ul className="mb-0 ps-3 about-list-clean">
-                                <li>Fast product browsing with clean card layout</li>
-                                <li>Transparent value score and price movement indicator</li>
-                                <li>Wishlist, cart, profile orders, and payment receipt support</li>
-                                <li>Same-category comparison for better buying decisions</li>
-                                <li>Simple and professional shopping experience</li>
+                                <li>Fast product browsing with a clean layout</li>
+                                <li>Transparent ratings, reviews, and price trends</li>
+                                <li>Secure checkout and payment receipt support</li>
+                                <li>Easy order status tracking after purchase</li>
+                                <li>Helpful support for payment and delivery issues</li>
                             </ul>
                         </div>
                         <div className="about-contact-card about-balanced-card">
@@ -44,7 +43,7 @@ export const About: React.FC = () => {
                                 <span><i className="fa-solid fa-location-dot me-2 text-dark"></i>Kathmandu, Nepal</span>
                                 <span><i className="fa-solid fa-clock me-2 text-dark"></i>Support hours: 9:00 AM – 6:00 PM</span>
                             </div>
-                            <div className="small text-muted mt-3">For payment issues, order tracking, delivery updates, or account help, our support team is available to help you quickly and professionally.</div>
+                            <div className="small text-muted mt-3">For payment issues, order tracking, delivery updates, or account help, our support team is ready to assist you quickly and professionally.</div>
                         </div>
                     </div>
                 </div>

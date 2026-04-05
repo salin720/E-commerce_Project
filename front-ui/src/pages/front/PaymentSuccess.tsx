@@ -20,7 +20,6 @@ const decodeEsewaData = (raw: string | null): Record<string, any> | null => {
 export default function PaymentSuccess() {
     const [status, setStatus] = useState("Verifying your payment...");
     const [receipt, setReceipt] = useState<any>(null);
-    const [countdown, setCountdown] = useState<number | null>(null);
     const [searchParams] = useSearchParams();
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -58,7 +57,6 @@ export default function PaymentSuccess() {
                     dispatch(clearCart());
                     sessionStorage.removeItem("pendingEsewaCart");
                     sessionStorage.removeItem("pendingEsewaAmount");
-                    setCountdown(5);
                 } else {
                     setStatus("Payment could not be verified. Please contact support if money was deducted.");
                 }
@@ -66,15 +64,6 @@ export default function PaymentSuccess() {
             .catch(() => setStatus("Error verifying payment. Please contact support if needed."));
     }, [searchParams, dispatch]);
 
-    useEffect(() => {
-        if (countdown === null) return;
-        if (countdown <= 0) {
-            navigate("/profile/orders");
-            return;
-        }
-        const timer = window.setTimeout(() => setCountdown((prev) => (prev === null ? null : prev - 1)), 1000);
-        return () => window.clearTimeout(timer);
-    }, [countdown, navigate]);
 
     const orderCode = useMemo(() => receipt ? `#${String(receipt.orderId).slice(-8).toUpperCase()}` : "", [receipt]);
 
@@ -105,7 +94,6 @@ export default function PaymentSuccess() {
                     <Link to="/profile/orders" className="btn btn-dark rounded-pill px-4">Go to orders</Link>
                 </div>
             </div>}
-            {countdown !== null ? <div className="mt-3 text-muted">Redirecting to your orders in {countdown}s...</div> : null}
             <div className="d-flex justify-content-center gap-2 mt-4">
                 <Link to="/profile/orders" className="btn btn-dark">Go to Orders</Link>
                 <Link to="/" className="btn btn-outline-dark">Continue Shopping</Link>

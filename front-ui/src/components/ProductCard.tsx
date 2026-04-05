@@ -42,7 +42,6 @@ export const ProductCard: React.FC<{ product: ProductData }> = ({ product }) => 
                     {discountPercent > 0 && <span className="badge-sale">-{discountPercent}%</span>}
                 </Link>
                 <div className="product-card-body">
-                    <div className="small text-muted mb-1">{product.brand?.name || 'Quick Cart'}</div>
                     <Link to={`/products/${product._id}`} className="product-name-real">{product.name}</Link>
                     <div className="product-meta-real">
                         <span>{product.totalSold || 0} sold</span>

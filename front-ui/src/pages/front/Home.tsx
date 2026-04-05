@@ -6,9 +6,10 @@ import {Loading, ProductSection} from "@/components"
 import { useSelector } from "react-redux"
 
 const HERO_SLIDES = [
-    { className: "hero-clean-slide hero-clean-1" },
-    { className: "hero-clean-slide hero-clean-2" },
-    { className: "hero-clean-slide hero-clean-3" },
+    { image: "/slider-1.jpg", alt: "Quick Cart slider 1" },
+    { image: "/slider-2.jpg", alt: "Quick Cart slider 2" },
+    { image: "/slider-3.jpg", alt: "Quick Cart slider 3" },
+    { image: "/slider-4.avif", alt: "Quick Cart slider 4" },
 ]
 
 export const Home:React.FC = () => {
@@ -50,13 +51,8 @@ export const Home:React.FC = () => {
                     <Carousel className="hero-carousel hero-carousel-clean" indicators controls={HERO_SLIDES.length > 1} interval={3500}>
                         {HERO_SLIDES.map((slide, index) => (
                             <Carousel.Item key={index}>
-                                <div className={slide.className} aria-label={`Quick Cart banner ${index + 1}`}>
-                                    <div className="hero-clean-glow"></div>
-                                    <div className="hero-clean-badges">
-                                        <span>Trusted shopping</span>
-                                        <span>Clear pricing</span>
-                                        <span>Fast delivery support</span>
-                                    </div>
+                                <div className="hero-image-slide" aria-label={slide.alt}>
+                                    <img src={slide.image} alt={slide.alt} className="hero-image-banner" />
                                 </div>
                             </Carousel.Item>
                         ))}
