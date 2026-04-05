@@ -10,6 +10,7 @@ import { fromStorage, removeStorage, imgUrl } from "@/library/function"
 import http from "@/http"
 import { clearUser, setUser } from "@/store"
 import { Loading } from "./Loading"
+import { ScrollToTop } from "./ScrollToTop"
 import { Link, Outlet, useNavigate } from "react-router-dom"
 import { NavDropdown } from "react-bootstrap"
 
@@ -26,6 +27,7 @@ export const Layout: React.FC = () => {
     const [showSuggestions, setShowSuggestions] = useState(false)
     const [wishlistCount, setWishlistCount] = useState<number>(0)
     const searchWrapRef = useRef<HTMLFormElement | null>(null)
+    const [hideSearchBar, setHideSearchBar] = useState(false)
 
     const dispatch = useDispatch()
     const navigate = useNavigate()
@@ -111,6 +113,19 @@ export const Layout: React.FC = () => {
         return () => document.removeEventListener('mousedown', close)
     }, [])
 
+
+    useEffect(() => {
+        let lastY = window.scrollY
+        const onScroll = () => {
+            const currentY = window.scrollY
+            if (currentY > 140 && currentY > lastY) setHideSearchBar(true)
+            else if (currentY < lastY || currentY <= 80) setHideSearchBar(false)
+            lastY = currentY
+        }
+        window.addEventListener('scroll', onScroll, { passive: true })
+        return () => window.removeEventListener('scroll', onScroll)
+    }, [])
+
     const handleLogout = () => {
         if (!window.confirm('Are you sure want to logout? Please save your info before logout.')) return
         removeStorage("m3pmftoken")
@@ -131,6 +146,7 @@ export const Layout: React.FC = () => {
 
     return loading ? <Loading /> : (
         <div className="container-fluid px-0 bg-site">
+            <ScrollToTop />
             <header className="site-header sticky-top">
                 <div className="top-strip d-none d-md-block">
                     <div className="container-fluid px-lg-4 d-flex justify-content-between py-2 text-white small">
@@ -147,7 +163,7 @@ export const Layout: React.FC = () => {
                             <div className="col-lg-2 col-md-3 col-12">
                                 <Link to="/" className="site-logo-real text-decoration-none">Quick <span>Cart</span></Link>
                             </div>
-                            <div className="col-lg-7 col-md-6 col-12">
+                            <div className={`col-lg-7 col-md-6 col-12 search-shell-wrap ${hideSearchBar ? "search-shell-hidden" : ""}`}>
                                 <form onSubmit={handleSearch} className="search-shell" ref={searchWrapRef} >
                                     <input
                                         className="search-input-real"

@@ -1,5 +1,16 @@
 const { ErrorMessage, DataNotFound } = require('@/library/functions')
 const { Product, Review, Brand, Category } = require('@/models')
+
+const attachRatings = async (products = []) => {
+    if (!products.length) return products
+    const productIds = products.map(item => item._id)
+    const ratings = await Review.aggregate([
+        { $match: { productId: { $in: productIds } } },
+        { $group: { _id: '$productId', avgRating: { $avg: { $toDouble: '$rating' } }, reviewCount: { $sum: 1 } } },
+    ])
+    const ratingMap = new Map(ratings.map(item => [String(item._id), { avgRating: Number((item.avgRating || 0).toFixed(1)), reviewCount: item.reviewCount || 0 }]))
+    return products.map(item => ({ ...item, ...(ratingMap.get(String(item._id)) || { avgRating: 0, reviewCount: 0 }) }))
+}
 const mongoose = require('mongoose')
 const { Types } = require('mongoose')
 const { searchProducts, autocompleteProducts } = require('@/services/search.service')
@@ -8,7 +19,7 @@ const { getSimilarProducts, getTrendingProducts } = require('@/services/recommen
 class ProductCtrl {
     latest = async (req, res, next) => {
         try {
-            const latest = await Product.find({ status: true }).sort({ createdAt: 'desc' }).limit(12)
+            const latest = await attachRatings(await Product.find({ status: true }).sort({ createdAt: 'desc' }).limit(12).lean())
             res.send({ latest })
         } catch (error) {
             ErrorMessage(next, error)
@@ -18,7 +29,8 @@ class ProductCtrl {
     featured = async (req, res, next) => {
         try {
             const featured = await Product.find({ status: true, discountedPrice: { $gt: 0 } }).lean()
-            const ranked = featured
+            const ratedFeatured = await attachRatings(featured)
+            const ranked = ratedFeatured
                 .filter(item => (item.price || 0) > 0 && (item.discountedPrice || 0) > 0 && item.discountedPrice < item.price)
                 .map(item => ({
                     ...item,
@@ -34,7 +46,7 @@ class ProductCtrl {
 
     topSelling = async (req, res, next) => {
         try {
-            const topSelling = await getTrendingProducts(12)
+            const topSelling = await attachRatings(await getTrendingProducts(12))
             res.send({ topSelling })
         } catch (error) {
             ErrorMessage(next, error)
@@ -58,11 +70,14 @@ class ProductCtrl {
                 for (let i in reviews) {
                     reviews[i].user = reviews[i].user[0]
                 }
+                const avgRating = reviews.length ? Number((reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length).toFixed(1)) : 0
                 product = {
                     ...product,
                     brand: product.brand[0],
                     category: product.category[0],
                     reviews,
+                    avgRating,
+                    reviewCount: reviews.length,
                 }
                 res.send({ product })
             } else {
@@ -76,7 +91,7 @@ class ProductCtrl {
     productByCategoryID = async (req, res, next) => {
         try {
             const { id } = req.params
-            const products = await Product.find({ status: true, categoryId: id }).sort({ totalSold: -1, createdAt: -1 })
+            const products = await attachRatings(await Product.find({ status: true, categoryId: id }).sort({ totalSold: -1, createdAt: -1 }).lean())
             res.send(products)
         } catch (error) {
             ErrorMessage(next, error)
@@ -86,7 +101,7 @@ class ProductCtrl {
     productByBrandID = async (req, res, next) => {
         try {
             const { id } = req.params
-            const products = await Product.find({ status: true, brandId: id }).sort({ totalSold: -1, createdAt: -1 })
+            const products = await attachRatings(await Product.find({ status: true, brandId: id }).sort({ totalSold: -1, createdAt: -1 }).lean())
             res.send(products)
         } catch (error) {
             ErrorMessage(next, error)
@@ -98,8 +113,8 @@ class ProductCtrl {
             const { term = '', limit = 24 } = req.query
             const results = await searchProducts(term, { limit: Number(limit) })
             res.send({
-                product: results.products,
-                products: results.products,
+                product: await attachRatings(results.products),
+                products: await attachRatings(results.products),
                 meta: {
                     normalizedQuery: results.normalizedQuery,
                     tokens: results.tokens,
@@ -124,7 +139,7 @@ class ProductCtrl {
     similar = async (req, res, next) => {
         try {
             const { id } = req.params
-            const similar = await getSimilarProducts(id, { limit: Number(req.query.limit || 8) })
+            const similar = await attachRatings(await getSimilarProducts(id, { limit: Number(req.query.limit || 8) }))
             res.send({ similar, products: similar })
         } catch (error) {
             ErrorMessage(next, error)

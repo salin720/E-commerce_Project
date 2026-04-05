@@ -1,4 +1,5 @@
 import { ProductData, UserType } from "@/library/interfaces.ts"
+import { getPriceStability, getSmartPurchaseScore } from "@/library/productInsights.ts"
 import { imgUrl } from "@/library/function.ts"
 import { Link, useNavigate } from "react-router-dom"
 import { useDispatch, useSelector } from "react-redux"
@@ -13,6 +14,10 @@ export const ProductCard: React.FC<{ product: ProductData }> = ({ product }) => 
     const navigate = useNavigate()
     const finalPrice = product.discountedPrice > 0 ? product.discountedPrice : product.price
     const discountPercent = product.discountedPrice > 0 ? Math.round(((product.price - product.discountedPrice) / product.price) * 100) : 0
+    const { score } = getSmartPurchaseScore(product)
+    const priceStability = getPriceStability(product)
+    const avgRating = Number(product.avgRating || 0)
+    const reviewCount = Number(product.reviewCount || 0)
 
     const handleAddToCart = () => {
         if (!user) {
@@ -43,6 +48,20 @@ export const ProductCard: React.FC<{ product: ProductData }> = ({ product }) => 
                         <span>{product.totalSold || 0} sold</span>
                         <span>•</span>
                         <span>{product.totalViews || 0} views</span>
+                    </div>
+                    <div className="product-insights-row product-insights-inline product-insights-tight">
+                        <span className="insight-chip insight-score">Score: {score}/100</span>
+                        <span className={`insight-chip insight-${priceStability.tone}`}>
+                            <i className={`fas ${priceStability.tone === 'up' ? 'fa-arrow-trend-up' : priceStability.tone === 'down' ? 'fa-arrow-trend-down' : 'fa-wave-square'} me-1`}></i>
+                            {priceStability.text}
+                        </span>
+                    </div>
+                    <div className="product-rating-row mb-2">
+                        <span className="text-warning">{[1,2,3,4,5].map((star) => {
+                            const iconClass = avgRating >= star ? "fas fa-star" : avgRating >= star - 0.5 ? "fas fa-star-half-alt" : "far fa-star"
+                            return <i key={star} className={`${iconClass} me-1`}></i>
+                        })}</span>
+                        <span className="small text-muted">{avgRating ? avgRating.toFixed(1) : "0.0"} {reviewCount > 0 ? `(${reviewCount})` : "(0)"}</span>
                     </div>
                     <div className="d-flex align-items-end gap-2 mb-2 flex-wrap">
                         <span className="price-real">Rs. {finalPrice}</span>

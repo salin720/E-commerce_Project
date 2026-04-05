@@ -8,5 +8,6 @@ import * as Brands from "./brands"
 import * as Products from "./products"
 import * as Reviews from "./reviews"
 import * as Orders from "./orders"
+import * as Payments from "./payments"
 
-export {Dashboard, Auth, Profile, Staffs, Customers, Categories, Brands, Products, Reviews, Orders}
+export {Dashboard, Auth, Profile, Staffs, Customers, Categories, Brands, Products, Reviews, Orders, Payments}

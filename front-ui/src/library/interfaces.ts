@@ -43,13 +43,17 @@ export interface ProductData {
     stock?: number
     totalViews?: number
     totalSold?: number
+    priceHistory?: { price: number; recordedAt?: string }[]
     createdAt: string
     updatedAt: string
     __v: number
     category?: CatBrandData
     brand?: CatBrandData
     reviews?: ReviewData[]
+    avgRating?: number
+    reviewCount?: number
 }
+
 
 export interface SearchSuggestion { _id: string, name: string, brandName?: string, categoryName?: string, image?: string | null, score?: number }
 export interface SelectFieldProps { formik: any, name: string, label: string, data: DataListType[] }

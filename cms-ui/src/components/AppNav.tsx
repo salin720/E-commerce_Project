@@ -24,6 +24,7 @@ export const AppNav: React.FC = () => {
                     <NavLink to="/brands" className="admin-link"><i className="fa-solid fa-tags me-2" />Brands</NavLink>
                     <NavLink to="/products" className="admin-link"><i className="fa-solid fa-box-open me-2" />Products</NavLink>
                     <NavLink to="/orders" className="admin-link"><i className="fa-solid fa-receipt me-2" />Orders</NavLink>
+                    <NavLink to="/payments" className="admin-link"><i className="fa-solid fa-wallet me-2" />Payments</NavLink>
                 </nav>
                 <div className="admin-user-card">
                     <div className="fw-semibold">{user.name}</div>

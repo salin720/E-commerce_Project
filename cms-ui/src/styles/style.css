@@ -40,3 +40,24 @@ body { background: #f6f7fb; font-family: Inter, system-ui, sans-serif; color: #1
 .quick-search-option img { width:42px; height:42px; border-radius:12px; object-fit:cover; }
 
 @media (max-width: 768px){ .date-filter-panel.select-mode { grid-template-columns: 1fr; } }
+
+
+.payments-monitor-card{background:#fff;border:1px solid #eaedf3;border-radius:28px;padding:1.5rem;box-shadow:0 16px 36px rgba(15,23,42,.06)}
+.payments-title{font-size:2rem;font-weight:800;color:#111827}
+.payments-subtitle{color:#94a3b8;font-weight:600}
+.payments-toolbar{display:flex;justify-content:space-between;gap:1rem;align-items:center;background:#f8fafc;border:1px solid #e6edf5;border-radius:20px;padding:1rem 1.1rem;margin-bottom:1rem}
+.payments-search-wrap{position:relative;flex:1;max-width:780px}
+.payments-search-wrap i{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#94a3b8}
+.payments-search-wrap .form-control{padding-left:42px;border-radius:14px}
+.payments-filter-select{max-width:220px;border-radius:14px}
+.payments-table-wrap{border:1px solid #edf2f8;border-radius:22px;overflow:hidden}
+.payments-table thead th{background:#f8fafc;color:#94a3b8;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #edf2f8;padding:1rem}
+.payments-table tbody td{padding:1rem;border-color:#edf2f8}
+.payments-amount{font-weight:800;color:#6366f1}
+.payment-ref-pill{display:inline-flex;background:#f8fafc;border:1px solid #eef2f7;border-radius:999px;padding:.35rem .7rem;font-weight:700;color:#94a3b8}
+.payment-method-pill{display:inline-flex;background:#eef2ff;color:#3730a3;border-radius:999px;padding:.35rem .75rem;font-weight:700}
+.payment-state-badge{display:inline-flex;align-items:center;border-radius:999px;padding:.32rem .72rem;font-weight:800;font-size:.8rem}
+.payment-state-badge.success{background:#ecfdf3;color:#12b76a}
+.payment-state-badge.pending{background:#fff7ed;color:#ea580c}
+.payment-state-badge.failed{background:#fef2f2;color:#dc2626}
+.payment-state-badge.neutral{background:#f8fafc;color:#475569}

@@ -12,3 +12,4 @@ import {AddCartBtn} from "./AddCartBtn"
 
 
 export {Layout, InputField, SubmitBtn, Loading, StatusField, DataTable, SelectField, FileField, FeaturedField, ProductSection, AddCartBtn}
+export * from "./ScrollToTop"

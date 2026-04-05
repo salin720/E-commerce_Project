@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { ProductData, UserType } from "@/library/interfaces.ts"
 import { Loading, ProductSection } from "@/components"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import http from "@/http"
 import { dtDiff, imgUrl } from "@/library/function.ts"
+import { getPriceStability, getSmartPurchaseScore } from "@/library/productInsights.ts"
 import { useDispatch, useSelector } from "react-redux"
 import { Button } from "react-bootstrap"
 import { setCart } from "@/store"
@@ -32,6 +33,7 @@ export const Detail: React.FC = () => {
         return saved ? JSON.parse(saved) : []
     })
     const [visibleReviews, setVisibleReviews] = useState<number>(10)
+    const trackedViewRef = useRef<string | null>(null)
 
     useEffect(() => {
         setLoading(true)
@@ -42,7 +44,8 @@ export const Detail: React.FC = () => {
                 setBigImg(pData?.images?.length ? imgUrl(pData.images[0]) : "")
                 setSelectedSize(pData?.sizes?.[0] || "")
                 setSelectedColor(pData?.colors?.[0] || "")
-                if (user && params.id) {
+                if (user && params.id && trackedViewRef.current !== params.id) {
+                    trackedViewRef.current = params.id
                     http.post('/activity/view', { productId: params.id, source: 'detail_page' }).catch(() => {})
                 }
             })
@@ -68,6 +71,8 @@ export const Detail: React.FC = () => {
     }, [product])
 
     const finalPrice = useMemo(() => product ? (product.discountedPrice > 0 ? product.discountedPrice : product.price) : 0, [product])
+    const purchaseScore = useMemo(() => getSmartPurchaseScore(product), [product])
+    const priceStability = useMemo(() => getPriceStability(product), [product])
 
     const handleReview = (e: any) => {
         e.preventDefault()
@@ -167,6 +172,18 @@ export const Detail: React.FC = () => {
                                 <span className="stock-pill in">{product?.stock && product.stock > 0 ? `${product.stock} available` : 'Limited stock'}</span>
                                 <span className="stock-pill">{product?.totalSold || 0} sold</span>
                                 <span className="stock-pill">{product?.totalViews || 0} views</span>
+                            </div>
+                            <div className="insight-panel mb-3">
+                                <div className="insight-panel-item">
+                                    <div className="insight-panel-label">Smart Purchase Decision Score</div>
+                                    <div className="insight-panel-value">{purchaseScore.score}/100</div>
+                                    <div className="small text-muted">{purchaseScore.label}</div>
+                                </div>
+                                <div className="insight-panel-item">
+                                    <div className="insight-panel-label">Price Stability Indicator</div>
+                                    <div className={`insight-chip insight-${priceStability.tone}`}>{priceStability.text}</div>
+                                    <div className="small text-muted mt-2">{priceStability.comparisonText}</div>
+                                </div>
                             </div>
                             <div className="mb-4 p-3 rounded-4 bg-light border-soft">{product?.description}</div>
                         </div>

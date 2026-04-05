@@ -22,7 +22,8 @@ class ProductController{
             const{name, status, description, shortDescription, price, discountedPrice, categoryId, brandId, featured, stock, sizes, colors } = req.body
             let images = []
             for(let file of (req.files || [])){ images.push(file.filename) }
-            await Product.create({name, status, description, shortDescription, price, discountedPrice, categoryId, brandId, featured, stock: Math.max(1, Number(stock || 1)), images, sizes: String(sizes || '').split(',').map((item) => item.trim()).filter(Boolean), colors: String(colors || '').split(',').map((item) => item.trim()).filter(Boolean) })
+            const effectivePrice = Number(discountedPrice) > 0 ? Number(discountedPrice) : Number(price)
+            await Product.create({name, status, description, shortDescription, price, discountedPrice, categoryId, brandId, featured, stock: Math.max(1, Number(stock || 1)), images, sizes: String(sizes || '').split(',').map((item) => item.trim()).filter(Boolean), colors: String(colors || '').split(',').map((item) => item.trim()).filter(Boolean), priceHistory: effectivePrice > 0 ? [{ price: effectivePrice, recordedAt: new Date() }] : [] })
             res.status(201).send({ message: 'Product added successfully' })
         } catch (error){ ErrorMessage(next, error) }
     }
@@ -45,7 +46,17 @@ class ProductController{
                 if(req.files && req.files.length > 0){
                     for(let file of req.files){ images.push(file.filename) }
                 }
-                await Product.findByIdAndUpdate(id, {name, status, description, shortDescription, price, discountedPrice, categoryId, brandId, featured, stock: Math.max(1, Number(stock || 1)), images, sizes: String(sizes || '').split(',').map((item) => item.trim()).filter(Boolean), colors: String(colors || '').split(',').map((item) => item.trim()).filter(Boolean)},{runValidators: true})
+                const oldEffectivePrice = Number(product.discountedPrice) > 0 ? Number(product.discountedPrice) : Number(product.price)
+                const newEffectivePrice = Number(discountedPrice) > 0 ? Number(discountedPrice) : Number(price)
+                const priceHistory = Array.isArray(product.priceHistory) ? [...product.priceHistory] : []
+                if (!priceHistory.length && oldEffectivePrice > 0) {
+                    priceHistory.push({ price: oldEffectivePrice, recordedAt: product.updatedAt || product.createdAt || new Date() })
+                }
+                const lastHistoryPrice = priceHistory.length ? Number(priceHistory[priceHistory.length - 1].price) : 0
+                if (newEffectivePrice > 0 && Number(newEffectivePrice) !== Number(lastHistoryPrice)) {
+                    priceHistory.push({ price: newEffectivePrice, recordedAt: new Date() })
+                }
+                await Product.findByIdAndUpdate(id, {name, status, description, shortDescription, price, discountedPrice, categoryId, brandId, featured, stock: Math.max(1, Number(stock || 1)), images, sizes: String(sizes || '').split(',').map((item) => item.trim()).filter(Boolean), colors: String(colors || '').split(',').map((item) => item.trim()).filter(Boolean), priceHistory},{runValidators: true})
                 res.send({ message:"Product Updated" })
             }else{ DataNotFound(next, "Product") }
         }catch (error) { ErrorMessage(next, error) }

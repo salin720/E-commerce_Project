@@ -14,6 +14,7 @@ export const AppRouter: React.FC= () => {
         <Route path="brands" element={<PrivateRoute element={<Outlet />} />}><Route index element={<Pages.Brands.List/>} /><Route path="create" element={<Pages.Brands.Create/>} /><Route path=":id/edit" element={<Pages.Brands.Edit/>} /></Route>
         <Route path="products" element={<PrivateRoute element={<Outlet />} />}><Route index element={<Pages.Products.List/>} /><Route path="create" element={<Pages.Products.Create/>} /><Route path=":id/edit" element={<Pages.Products.Edit/>} /></Route>
         <Route path="/orders" element={<PrivateRoute element={<Pages.Orders.List />} />} />
+        <Route path="/payments" element={<PrivateRoute element={<Pages.Payments.List />} />} />
         <Route path="/login" element={<Pages.Auth.Login />} />
     </Route></Routes></BrowserRouter>
 }

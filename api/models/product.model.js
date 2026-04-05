@@ -17,6 +17,10 @@ const Product = model('Product', new Schema({
     totalSold: {type: Number, default: 0},
     sizes: { type: [String], default: [] },
     colors: { type: [String], default: [] },
+    priceHistory: {
+        type: [{ price: { type: Number, required: true }, recordedAt: { type: Date, default: Date.now } }],
+        default: [],
+    },
 }, modelConfig))
 
 module.exports = Product
