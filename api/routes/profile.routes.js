@@ -9,6 +9,7 @@ router.route('/update').put(Profile.ProfileCtrl.edit).patch(Profile.ProfileCtrl.
 router.route('/password').put(Profile.ProfileCtrl.password).patch(Profile.ProfileCtrl.password)
 router.get('/reviews', Profile.ProfileCtrl.reviews)
 router.get('/orders', Profile.ProfileCtrl.orders)
+router.delete('/orders/:id', Profile.ProfileCtrl.deleteOrderHistory)
 router.post('/upload-avatar', upload().single('avatar'), Profile.ProfileCtrl.uploadAvatar)
 router.delete('/remove-avatar', Profile.ProfileCtrl.removeAvatar)
 

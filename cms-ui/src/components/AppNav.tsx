@@ -7,7 +7,10 @@ import { clearUser } from "@/store"
 export const AppNav: React.FC = () => {
     const user: UserType = useSelector((state: any) => state.user.value)
     const dispatch = useDispatch()
-    const handleLogout = () => { removeStorage("m3pmctoken"); dispatch(clearUser()) }
+    const handleLogout = () => {
+        if (!window.confirm('Are you sure want to logout? Please save your info before logout.')) return
+        removeStorage("m3pmctoken"); dispatch(clearUser())
+    }
     if (!user) return null
     return (
         <aside className="admin-sidebar text-white position-fixed vh-100">

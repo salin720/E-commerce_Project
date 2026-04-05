@@ -9,9 +9,9 @@ export interface UserFormData { name: string, email?: string, phone: string, add
 export interface PasswordFormData { oldPassword: string, password: string, confirmPassword: string }
 export type DataListType = { [key: string]: any }[]
 export interface DataTableProps { data: DataListType, searchable? : string[], pageSize?: number }
-export interface CatBrandData { _id: string, name: string, status: boolean, createdAt: string, updatedAt: string, __v: number }
-export interface ProductData { _id: string, name: string, description: string, shortDescription: string, price: number, discountedPrice: number, categoryId: string, brandId: string, images: string[], status: boolean, featured: boolean, stock?: number, totalViews?: number, totalSold?: number, createdAt: string, updatedAt: string, __v: number, category?: CatBrandData, brand?: CatBrandData }
-export interface ProductFormData { name: string, description: string, shortDescription: string, price: number, discountedPrice: number, categoryId: string, brandId: string, images: File[], stock: number, status: number, featured: number }
+export interface CatBrandData { _id: string, name: string, status: boolean, image?: string | null, createdAt: string, updatedAt: string, __v: number }
+export interface ProductData { _id: string, name: string, description: string, shortDescription: string, price: number, discountedPrice: number, categoryId: string, brandId: string, images: string[], sizes?: string[], colors?: string[], status: boolean, featured: boolean, stock?: number, totalViews?: number, totalSold?: number, createdAt: string, updatedAt: string, __v: number, category?: CatBrandData, brand?: CatBrandData }
+export interface ProductFormData { name: string, description: string, shortDescription: string, price: number, discountedPrice: number, categoryId: string, brandId: string, images: File[], stock: number, sizes?: string, colors?: string, status: number, featured: number }
 export interface SelectFieldProps { formik: any, name: string, label: string, data: DataListType[] }
 export interface ReviewData { _id: string, comment: string, rating: number, productId: string, userId: string, createdAt: string, updatedAt: string, __v: number, product?: ProductData, user?: UserData }
 export interface DetailData { _id: string, orderId: string, productId: string, qty: number, price: number, total: number, createdAt: string, updatedAt: string, __v: number, product?: ProductData }

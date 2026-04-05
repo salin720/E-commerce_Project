@@ -24,7 +24,7 @@ export interface PasswordFormData { oldPassword: string, password: string, confi
 export type DataListType = { [key: string]: any }[]
 export interface DataTableProps { data: DataListType, searchable? : string[] }
 
-export interface CatBrandData { _id: string, name: string, status: boolean, createdAt: string, updatedAt: string, __v: number }
+export interface CatBrandData { _id: string, name: string, status: boolean, image?: string | null, createdAt: string, updatedAt: string, __v: number }
 
 export interface ProductData {
     _id: string
@@ -36,6 +36,8 @@ export interface ProductData {
     categoryId: string
     brandId: string
     images: string[]
+    sizes?: string[]
+    colors?: string[]
     status: boolean
     featured: boolean
     stock?: number
@@ -73,6 +75,8 @@ export interface DetailData {
     qty: number
     price: number
     total: number
+    selectedSize?: string
+    selectedColor?: string
     createdAt: string
     updatedAt: string
     __v: number
@@ -105,7 +109,7 @@ export interface OrderData {
 }
 
 export interface CartData {
-    [id: string]: { product: ProductData, qty: number, price: number, total: number }
+    [id: string]: { product: ProductData, qty: number, price: number, total: number, selectedSize?: string, selectedColor?: string }
 }
 export interface AddCartBtnProps { product: ProductData, qty?: number }
 

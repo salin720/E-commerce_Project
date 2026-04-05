@@ -18,9 +18,11 @@ export const AppRouter: React.FC= () => {
                 <Route path="/login" element={<Pages.Auth.Login/>} />
                 <Route path="/register" element={<Pages.Auth.Register/>} />
                 <Route path="/cart" element={<PrivateRoute element={<Pages.Front.Cart />} />} />
+                <Route path="/wishlist" element={<PrivateRoute element={<Pages.Front.Wishlist />} />} />
                 <Route path="/profile" element={<PrivateRoute element={<Pages.Profile.UserProfile />} />} />
                 <Route path="/payment/success" element={<PaymentSuccess />} />
                 <Route path="/payment-success" element={<PaymentSuccess />} />
+                <Route path="/about" element={<Pages.Front.About />} />
 
             </Route>
         </Routes>

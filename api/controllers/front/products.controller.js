@@ -17,8 +17,16 @@ class ProductCtrl {
 
     featured = async (req, res, next) => {
         try {
-            const featured = await Product.find({ status: true, featured: true }).sort({ createdAt: -1 }).limit(12)
-            res.send({ featured })
+            const featured = await Product.find({ status: true, discountedPrice: { $gt: 0 } }).lean()
+            const ranked = featured
+                .filter(item => (item.price || 0) > 0 && (item.discountedPrice || 0) > 0 && item.discountedPrice < item.price)
+                .map(item => ({
+                    ...item,
+                    _discountRate: (item.price - item.discountedPrice) / item.price,
+                }))
+                .sort((a, b) => b._discountRate - a._discountRate || (b.totalSold || 0) - (a.totalSold || 0) || +new Date(b.updatedAt) - +new Date(a.updatedAt))
+                .slice(0, 15)
+            res.send({ featured: ranked })
         } catch (error) {
             ErrorMessage(next, error)
         }

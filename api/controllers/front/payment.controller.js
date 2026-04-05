@@ -20,7 +20,7 @@ exports.createPayment = async (req, res, next) => {
             const price = product.discountedPrice > 0 ? product.discountedPrice : product.price
             const total = price * item.qty;
             amount += total;
-            await Detail.create({orderId: order._id, productId: product._id, qty: item.qty, price, total})
+            await Detail.create({orderId: order._id, productId: product._id, qty: item.qty, price, total, selectedSize: item.selectedSize || '', selectedColor: item.selectedColor || ''})
         }
 
         const success_url = process.env.CALLBACK_URL;

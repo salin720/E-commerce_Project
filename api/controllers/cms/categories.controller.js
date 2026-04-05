@@ -16,8 +16,9 @@ class CategoriesController {
     store = async (req,res,next) => {
         try{
             const{name, status} = req.body
+            const image = req.file ? req.file.filename : null
 
-            await Category.create({name, status})
+            await Category.create({name, status, image})
 
             res.status(201).send({
                 message: 'Category added successfully'
@@ -48,11 +49,12 @@ class CategoriesController {
             const {id} = req.params
 
             const  {name, status} = req.body
+            const image = req.file ? req.file.filename : undefined
 
             const category = await Category.findById(id)
 
             if(category){
-                await Category.findByIdAndUpdate(id, {name, status},{runValidators: true})
+                await Category.findByIdAndUpdate(id, {name, status, ...(image !== undefined ? { image } : {})},{runValidators: true})
 
                 res.send({
                     message:"Category Updated",

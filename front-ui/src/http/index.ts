@@ -12,8 +12,9 @@ const http = axios.create({
 
 //middlewares
 http.interceptors.response.use(response => {
-    if(response?.data?.message) {
-        toast.success(response.data.message)
+    const message = response?.data?.message
+    if(message && !/activity tracked\.?$/i.test(message)) {
+        toast.success(message)
     }
     return response
 }, error => {

@@ -2,7 +2,7 @@ import { useFormik } from "formik";
 import http from "@/http";
 import { useNavigate } from "react-router-dom";
 import { Col, Container, Form, Row } from "react-bootstrap";
-import {InputField, StatusField, SubmitBtn} from "@/components";
+import {InputField, StatusField, SubmitBtn, FileField} from "@/components";
 
 export const Create: React.FC = () => {
     const navigate = useNavigate();
@@ -11,12 +11,17 @@ export const Create: React.FC = () => {
         initialValues: {
             name: '',
             status: 1,
+            image: [],
         },
         onSubmit: (data, { setSubmitting }) => {
+            const formData = new FormData()
+            formData.append("name", data.name as any)
+            formData.append("status", String((data.status as any) == 1))
+            if (data.image?.[0]) formData.append("image", data.image[0])
             // @ts-ignore
             data.status = data.status == 1;
 
-            http.post('/cms/brands', data)
+            http.post('/cms/brands', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
                 .then(() => navigate('/brands'))
                 .catch(({ response: { data } }) => {
                     if (data?.validation) {
@@ -40,6 +45,7 @@ export const Create: React.FC = () => {
                         <Col>
                             <Form onSubmit={formik.handleSubmit}>
                                 <InputField formik={formik} name="name" label="Name" />
+                                <FileField formik={formik} name="image" label="Image" accept="image/*" />
                                 <StatusField formik={formik} />
                                 <SubmitBtn disabled={formik.isSubmitting} />
                             </Form>

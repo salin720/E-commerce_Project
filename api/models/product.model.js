@@ -15,6 +15,8 @@ const Product = model('Product', new Schema({
     stock: {type: Number, default: 0},
     totalViews: {type: Number, default: 0},
     totalSold: {type: Number, default: 0},
+    sizes: { type: [String], default: [] },
+    colors: { type: [String], default: [] },
 }, modelConfig))
 
 module.exports = Product

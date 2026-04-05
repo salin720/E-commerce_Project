@@ -24,10 +24,12 @@ export const AddCartBtn: React.FC<AddCartBtnProps> = ({product, qty = 1}) => {
             product: product,
             qty: qt,
             price: price,
-            total: total
+            total: total,
+            selectedSize: '',
+            selectedColor: ''
         }
     }))
-    toast.success('Product added to cart.')
+    toast.success(`${product.name} added to cart successfully.`)
   }
 
   return <button className="btn btn-outline-dark" type="button" onClick={ handleClick}>

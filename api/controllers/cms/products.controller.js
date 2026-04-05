@@ -19,10 +19,10 @@ class ProductController{
 
     store = async (req,res,next) => {
         try{
-            const{name, status, description, shortDescription, price, discountedPrice, categoryId, brandId, featured, stock } = req.body
+            const{name, status, description, shortDescription, price, discountedPrice, categoryId, brandId, featured, stock, sizes, colors } = req.body
             let images = []
             for(let file of (req.files || [])){ images.push(file.filename) }
-            await Product.create({name, status, description, shortDescription, price, discountedPrice, categoryId, brandId, featured, stock, images })
+            await Product.create({name, status, description, shortDescription, price, discountedPrice, categoryId, brandId, featured, stock: Math.max(1, Number(stock || 1)), images, sizes: String(sizes || '').split(',').map((item) => item.trim()).filter(Boolean), colors: String(colors || '').split(',').map((item) => item.trim()).filter(Boolean) })
             res.status(201).send({ message: 'Product added successfully' })
         } catch (error){ ErrorMessage(next, error) }
     }
@@ -38,14 +38,14 @@ class ProductController{
     update = async (req,res,next) => {
         try{
             const {id} = req.params
-            const{name, status, description, shortDescription, price, discountedPrice, categoryId, brandId, featured, stock } = req.body
+            const{name, status, description, shortDescription, price, discountedPrice, categoryId, brandId, featured, stock, sizes, colors } = req.body
             const product = await Product.findById(id)
             if(product){
                 let images = product.images || []
                 if(req.files && req.files.length > 0){
                     for(let file of req.files){ images.push(file.filename) }
                 }
-                await Product.findByIdAndUpdate(id, {name, status, description, shortDescription, price, discountedPrice, categoryId, brandId, featured, stock, images},{runValidators: true})
+                await Product.findByIdAndUpdate(id, {name, status, description, shortDescription, price, discountedPrice, categoryId, brandId, featured, stock: Math.max(1, Number(stock || 1)), images, sizes: String(sizes || '').split(',').map((item) => item.trim()).filter(Boolean), colors: String(colors || '').split(',').map((item) => item.trim()).filter(Boolean)},{runValidators: true})
                 res.send({ message:"Product Updated" })
             }else{ DataNotFound(next, "Product") }
         }catch (error) { ErrorMessage(next, error) }

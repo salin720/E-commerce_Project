@@ -25,10 +25,13 @@ export const Detail: React.FC = () => {
     const [avgRating, setAvgRating] = useState<number>(0)
     const [starRatings, setStarRatings] = useState<Record<number, number>>({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 })
     const [qty, setQty] = useState<number>(1)
+    const [selectedSize, setSelectedSize] = useState<string>("")
+    const [selectedColor, setSelectedColor] = useState<string>("")
     const [wishlist, setWishlist] = useState<string[]>(() => {
         const saved = localStorage.getItem("wishlist")
         return saved ? JSON.parse(saved) : []
     })
+    const [visibleReviews, setVisibleReviews] = useState<number>(10)
 
     useEffect(() => {
         setLoading(true)
@@ -37,6 +40,8 @@ export const Detail: React.FC = () => {
                 setProduct(pData)
                 setSimilar(sData?.products || sData?.similar || [])
                 setBigImg(pData?.images?.length ? imgUrl(pData.images[0]) : "")
+                setSelectedSize(pData?.sizes?.[0] || "")
+                setSelectedColor(pData?.colors?.[0] || "")
                 if (user && params.id) {
                     http.post('/activity/view', { productId: params.id, source: 'detail_page' }).catch(() => {})
                 }
@@ -89,6 +94,7 @@ export const Detail: React.FC = () => {
                 if (user) http.post('/activity/wishlist', { productId, active: true }).catch(() => {})
             }
             localStorage.setItem("wishlist", JSON.stringify(newWishlist))
+            window.dispatchEvent(new Event('wishlist-updated'))
             return newWishlist
         })
     }
@@ -99,12 +105,24 @@ export const Detail: React.FC = () => {
             navigate("/login")
             return
         }
+        if ((product.sizes?.length || 0) > 0 && !selectedSize) {
+            toast.error("Please choose a size.")
+            return
+        }
+        if ((product.colors?.length || 0) > 0 && !selectedColor) {
+            toast.error("Please choose a color.")
+            return
+        }
         const id = product._id
         const existing = cart[id]
         const nextQty = existing ? existing.qty + qty : qty
-        dispatch(setCart({ ...cart, [id]: { product, qty: nextQty, price: finalPrice, total: nextQty * finalPrice } }))
+        const nextCart = { ...cart, [id]: { product, qty: nextQty, price: finalPrice, total: nextQty * finalPrice, selectedSize, selectedColor } }
+        dispatch(setCart(nextCart))
+        try {
+            localStorage.setItem('m3pmcart', JSON.stringify(nextCart))
+        } catch {}
         http.post('/activity/cart', { productId: product._id, action: 'add', qty: nextQty, source: 'detail_page' }).catch(() => {})
-        toast.success('Product added to cart.')
+        toast.success(`${product.name} added to cart successfully.`)
     }
 
     return loading ? <Loading /> : <div className="col-12 px-3 px-lg-4 py-4">
@@ -163,7 +181,7 @@ export const Detail: React.FC = () => {
                                         </>
                                     ) : <div className="detail-price">Rs. {product?.price}</div>}
                                 </div>
-                                <div className="mb-3">
+                                {product?.sizes?.length ? <div className="mb-3"><label className="form-label">Size</label><select className="form-select" value={selectedSize} onChange={e => setSelectedSize(e.target.value)}><option value="">Choose size</option>{product.sizes.map(size => <option key={size} value={size}>{size}</option>)}</select></div> : null}{product?.colors?.length ? <div className="mb-3"><label className="form-label">Color</label><select className="form-select" value={selectedColor} onChange={e => setSelectedColor(e.target.value)}><option value="">Choose color</option>{product.colors.map(color => <option key={color} value={color}>{color}</option>)}</select></div> : null}<div className="mb-3">
                                     <label htmlFor="qty" className="form-label">Quantity</label>
                                     <input type="number" id="qty" min="1" max={product?.stock || 99} value={qty} className="form-control" onChange={({ target }) => setQty(Math.max(1, Number(target.value)))} />
                                 </div>
@@ -187,7 +205,7 @@ export const Detail: React.FC = () => {
                     <div className="text-warning mb-3">{[1,2,3,4,5].map(star => <i key={star} className={`fa-star ${avgRating >= star ? 'fas' : 'far'} me-1`}></i>)}</div>
                     {[5,4,3,2,1].map(star => (
                         <div key={star} className="mb-2">
-                            <div className="d-flex justify-content-between small"><span>{star} Star</span><span>{starRatings[star].toFixed(0)}%</span></div>
+                            <div className="d-flex justify-content-between small"><span>{Array.from({length: star}).map((_, i) => <i key={i} className='fas fa-star me-1 text-warning'></i>)}</span><span>{starRatings[star].toFixed(0)}%</span></div>
                             <div className="progress" style={{height: 8}}><div className="progress-bar bg-dark" style={{width: `${starRatings[star]}%`}}></div></div>
                         </div>
                     ))}
@@ -214,13 +232,18 @@ export const Detail: React.FC = () => {
                 {!!product?.reviews?.length && (
                     <div className="bg-white rounded-4 shadow-sm p-4 border-soft h-100">
                         <h4 className="mb-3">Customer Reviews</h4>
-                        {product.reviews.map(review => (
+                        {product.reviews.slice(0, visibleReviews).map(review => (
                             <div key={review._id} className="border rounded-4 p-3 mb-3">
                                 <div className="d-flex justify-content-between"><strong>{review.user?.name || 'Customer'}</strong><small className="text-muted">{dtDiff(review.createdAt)}</small></div>
                                 <div className="text-warning mb-2">{Array.from({length: review.rating}).map((_, i) => <i key={i} className="fas fa-star me-1"></i>)}</div>
                                 <div>{review.comment}</div>
                             </div>
                         ))}
+                        {product.reviews.length > visibleReviews && (
+                            <div className="text-center mt-2">
+                                <button className="btn btn-outline-dark rounded-pill px-4" onClick={() => setVisibleReviews(prev => prev + 10)}>See More Reviews</button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

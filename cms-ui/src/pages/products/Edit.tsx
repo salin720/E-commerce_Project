@@ -16,7 +16,7 @@ export const Edit: React.FC = () => {
     const navigate = useNavigate()
     const params = useParams()
     const formik = useFormik({
-        initialValues: { name: '', status: 1, brandId: '', categoryId: '', price: 0, discountedPrice: 0, stock: 0, featured: 0, description: '', shortDescription: '', images: [] } as ProductFormData,
+        initialValues: { name: '', status: 1, brandId: '', categoryId: '', price: 0, discountedPrice: 0, stock: 1, featured: 0, description: '', shortDescription: '', sizes: '', colors: '', images: [] } as ProductFormData,
         validationSchema: ProductEditFormValidation,
         onSubmit: (data, {setSubmitting}) => {
             // @ts-ignore
@@ -47,7 +47,7 @@ export const Edit: React.FC = () => {
     }, [])
 
     useEffect(() => {
-        if(product) formik.setValues({ name: product.name, shortDescription: product.shortDescription, description: product.description, price: product.price, discountedPrice: product.discountedPrice, stock: product.stock || 0, categoryId: product.categoryId, brandId: product.brandId, status: product.status? 1 : 0, featured: product.featured? 1 : 0, images: [] })
+        if(product) formik.setValues({ name: product.name, shortDescription: product.shortDescription, description: product.description, price: product.price, discountedPrice: product.discountedPrice, stock: product.stock || 1, categoryId: product.categoryId, brandId: product.brandId, status: product.status? 1 : 0, featured: product.featured? 1 : 0, sizes: (product.sizes || []).join(', '), colors: (product.colors || []).join(', '), images: [] })
     }, [product])
 
     const handleDelete = (filename: string) => { setLoading(true); http.delete(`cms/products/${params.id}/image/${filename}`).then(() => http.get(`cms/products/${params.id}`)).then(({data}) => setProduct(data)).finally(() => setLoading(false)) }
@@ -59,7 +59,7 @@ export const Edit: React.FC = () => {
                 <Col md={6}><InputField formik={formik} name="name" label="Name" /></Col>
                 <Col md={3}><InputField formik={formik} name="price" label="Price" type="number" /></Col>
                 <Col md={3}><InputField formik={formik} name="discountedPrice" label="Discounted Price" type="number" /></Col>
-                <Col md={4}><InputField formik={formik} name="stock" label="Quantity / Stock" type="number" /></Col>
+                <Col md={4}><InputField formik={formik} name="stock" label="Quantity / Stock" type="number" /></Col><Col md={4}><InputField formik={formik} name="sizes" label="Sizes (comma separated)" /></Col><Col md={4}><InputField formik={formik} name="colors" label="Colors (comma separated)" /></Col>
                 <Col md={4}><SelectField formik={formik} name='categoryId' label='Category' data={categories as any} /></Col>
                 <Col md={4}><SelectField formik={formik} name='brandId' label='Brand' data={brands as any} /></Col>
                 <Col md={12}><InputField formik={formik} name="shortDescription" label="Short Description" as="textarea" /></Col>

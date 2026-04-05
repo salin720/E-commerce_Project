@@ -7,6 +7,8 @@ const Detail = model('Detail', new Schema({
     qty: numberRequired,
     price: numberRequired,
     total: numberRequired,
+    selectedSize: { type: String, default: '' },
+    selectedColor: { type: String, default: '' },
 
 }, modelConfig))
 

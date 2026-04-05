@@ -67,6 +67,22 @@ class ProfileController {
         }catch (error) { ErrorMessage(next, error) }
     }
 
+
+    deleteOrderHistory = async(req,res,next) => {
+        try {
+            const { id } = req.params
+            const order = await Order.findOne({ _id: id, userId: req.user._id })
+            if (!order) return next({ status: 404, message: 'Order not found.' })
+            if (!(order.status === 'Delivered' && order.paymentStatus === 'Paid')) {
+                return next({ status: 422, message: 'Only delivered and paid orders can be removed from history.' })
+            }
+            await Detail.deleteMany({ orderId: order._id })
+            await Payment.deleteMany({ orderId: String(order._id) })
+            await Order.findByIdAndDelete(order._id)
+            res.send({ message: 'Order history deleted successfully.' })
+        } catch (error) { ErrorMessage(next, error) }
+    }
+
     uploadAvatar = async (req, res, next) => {
         try {
             if (!req.file) {

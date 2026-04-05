@@ -16,8 +16,9 @@ class brandsController {
     store = async (req,res,next) => {
         try{
             const{name, status} = req.body
+            const image = req.file ? req.file.filename : null
 
-            await Brand.create({name, status})
+            await Brand.create({name, status, image})
 
             res.status(201).send({
                 message: 'Brand added successfully'
@@ -51,11 +52,12 @@ class brandsController {
             const {id} = req.params
 
             const  {name, status} = req.body
+            const image = req.file ? req.file.filename : undefined
 
             const brand = await Brand.findById(id)
 
             if(brand){
-                await Brand.findByIdAndUpdate(id, {name, status},{runValidators: true})
+                await Brand.findByIdAndUpdate(id, {name, status, ...(image !== undefined ? { image } : {})},{runValidators: true})
 
                 res.send({
                     message:"Brand Updated",

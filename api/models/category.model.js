@@ -4,6 +4,7 @@ const {stringRequired, booleanTrue, modelConfig} = require('../library/constants
 const Category = model('Category', new Schema({
     name: stringRequired,
     status: booleanTrue,
+    image: { type: String, trim: true, default: null },
 
 }, modelConfig))
 

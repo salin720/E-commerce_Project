@@ -70,7 +70,13 @@ export const Layout: React.FC = () => {
         }
         syncWishlist()
         window.addEventListener('storage', syncWishlist)
-        return () => window.removeEventListener('storage', syncWishlist)
+        window.addEventListener('wishlist-updated', syncWishlist as EventListener)
+        window.addEventListener('focus', syncWishlist)
+        return () => {
+            window.removeEventListener('storage', syncWishlist)
+            window.removeEventListener('wishlist-updated', syncWishlist as EventListener)
+            window.removeEventListener('focus', syncWishlist)
+        }
     }, [])
 
     useEffect(() => {
@@ -81,7 +87,13 @@ export const Layout: React.FC = () => {
         const timer = setTimeout(() => {
             http.get('/products/autocomplete', { params: { term } })
                 .then(({ data }) => {
-                    setSuggestions(data?.suggestions || [])
+                    const productSuggestions = data?.suggestions || []
+                    const keywordSuggestions = (data?.keywords || []).map((keyword: string, index: number) => ({
+                        _id: `keyword-${index}-${keyword}`,
+                        name: keyword,
+                        categoryName: 'Suggested search',
+                    }))
+                    setSuggestions([...keywordSuggestions, ...productSuggestions])
                     setShowSuggestions(true)
                 })
                 .catch(() => setSuggestions([]))
@@ -100,6 +112,7 @@ export const Layout: React.FC = () => {
     }, [])
 
     const handleLogout = () => {
+        if (!window.confirm('Are you sure want to logout? Please save your info before logout.')) return
         removeStorage("m3pmftoken")
         dispatch(clearUser())
         navigate("/")
@@ -123,7 +136,7 @@ export const Layout: React.FC = () => {
                     <div className="container-fluid px-lg-4 d-flex justify-content-between py-2 text-white small">
                         <div className="d-flex gap-3"><span><i className="fa fa-phone-square me-2"></i>+977-9765220864</span><span><i className="fa fa-envelope me-2"></i>quickcart@gmail.com</span></div>
                         <div className="d-flex gap-3">
-                            {user ? <><Link to="/profile" className="text-white text-decoration-none">My Account</Link><button className="btn btn-link btn-sm text-white text-decoration-none p-0" onClick={handleLogout}>Logout</button></> : <><Link to="/login" className="text-white text-decoration-none">Login</Link><Link to="/register" className="text-white text-decoration-none">Register</Link></>}
+                            {user ? <><Link to="/profile" className="btn btn-sm btn-light rounded-pill px-3">My Account</Link><button className="btn btn-sm btn-outline-light rounded-pill px-3" onClick={handleLogout}>Logout</button></> : <><Link to="/login" className="btn btn-sm btn-light rounded-pill px-3">Login</Link><Link to="/register" className="btn btn-sm btn-warning rounded-pill px-3">Register</Link></>}
                         </div>
                     </div>
                 </div>
@@ -135,31 +148,23 @@ export const Layout: React.FC = () => {
                                 <Link to="/" className="site-logo-real text-decoration-none">Quick <span>Cart</span></Link>
                             </div>
                             <div className="col-lg-7 col-md-6 col-12">
-                                <form onSubmit={handleSearch} className="search-shell" ref={searchWrapRef} onMouseLeave={() => setShowSuggestions(false)}>
+                                <form onSubmit={handleSearch} className="search-shell" ref={searchWrapRef} >
                                     <input
                                         className="search-input-real"
                                         value={term}
                                         onChange={(e) => setTerm(e.target.value)}
-                                        onFocus={() => suggestions.length && setShowSuggestions(true)}
+                                        onFocus={() => { if (term.trim()) setShowSuggestions(true) }}
                                         placeholder="Search for products, brands and categories"
                                     />
                                     <button className="search-btn-real" type="submit"><i className="fa fa-search"></i></button>
                                     {showSuggestions && suggestions.length > 0 && (
                                         <div className="search-dropdown-real">
                                             {suggestions.map((item) => (
-                                                <button
-                                                    key={item._id}
-                                                    type="button"
-                                                    className="search-suggestion-item"
-                                                    onClick={() => {
-                                                        navigate(`/products/${item._id}`)
-                                                        setShowSuggestions(false)
-                                                    }}
-                                                >
-                                                    <img src={item.image ? imgUrl(item.image) : '/avatar.png'} alt={item.name} />
+                                                <button key={item._id} type="button" className="search-suggestion-item" onClick={() => { if (String(item._id).startsWith('keyword-')) { navigate(`/search?term=${encodeURIComponent(item.name)}`) } else if (String(item._id).startsWith('category-') || String(item._id).startsWith('brand-')) { navigate(`/search?term=${encodeURIComponent(item.name)}`) } else { navigate(`/products/${item._id}`) } setShowSuggestions(false) }}>
+                                                    <span className="search-suggestion-icon">{item.image ? <img src={item.image.startsWith('/image/') ? `${import.meta.env.VITE_API_URL}${item.image}` : imgUrl(item.image)} alt={item.name} className="suggestion-thumb" /> : <i className="fa fa-search"></i>}</span>
                                                     <div className="text-start">
-                                                        <div className="fw-semibold">{item.name}</div>
-                                                        <div className="small text-muted">{item.brandName || item.categoryName || 'Quick Cart'}</div>
+                                                        <div className="fw-medium">{item.name}</div>
+                                                        <div className="small text-muted">{item.brandName || item.categoryName || 'Suggested search'}</div>
                                                     </div>
                                                 </button>
                                             ))}
@@ -169,7 +174,7 @@ export const Layout: React.FC = () => {
                             </div>
                             <div className="col-lg-3 col-md-3 col-12 d-flex justify-content-lg-end gap-2 flex-wrap align-items-center">
                                 <Link to="/profile" className="icon-pill text-decoration-none"><img src={avatarUrl} className="avatar-mini" /> <span>{user ? user.name.split(' ')[0] : 'Guest'}</span></Link>
-                                <button className="icon-pill" type="button"><i className="fas fa-heart me-2"></i>{wishlistCount}</button>
+                                <Link to="/wishlist" className="icon-pill text-decoration-none"><i className="fas fa-heart me-2 text-danger"></i>{wishlistCount}</Link>
                                 <Link to="/cart" className="icon-pill text-decoration-none"><i className="fas fa-cart-shopping me-2"></i>{totalQty} • {money}</Link>
                             </div>
                         </div>
@@ -180,12 +185,13 @@ export const Layout: React.FC = () => {
                                 <ul className="navbar-nav mx-auto gap-lg-3">
                                     <li className="nav-item"><Link className="nav-link" to="/">Home</Link></li>
                                     <NavDropdown title="Categories">
-                                        {categories.map(cat => <Link key={cat._id} to={`/categories/${cat._id}`} className="dropdown-item">{cat.name}</Link>)}
+                                        {categories.map(cat => <Link key={cat._id} to={`/categories/${cat._id}`} className="dropdown-item dropdown-media-item">{cat.image ? <img src={cat.image.startsWith('/image/') ? `${import.meta.env.VITE_API_URL}${cat.image}` : imgUrl(cat.image)} alt={cat.name} className="dropdown-media-thumb" /> : <span className="dropdown-media-thumb dropdown-media-fallback"><i className="fa fa-grid-2"></i></span>}<span>{cat.name}</span></Link>)}
                                     </NavDropdown>
                                     <NavDropdown title="Brands">
-                                        {brands.map(brand => <Link key={brand._id} to={`/brands/${brand._id}`} className="dropdown-item">{brand.name}</Link>)}
+                                        {brands.map(brand => <Link key={brand._id} to={`/brands/${brand._id}`} className="dropdown-item dropdown-media-item">{brand.image ? <img src={brand.image.startsWith('/image/') ? `${import.meta.env.VITE_API_URL}${brand.image}` : imgUrl(brand.image)} alt={brand.name} className="dropdown-media-thumb" /> : <span className="dropdown-media-thumb dropdown-media-fallback"><i className="fa fa-tag"></i></span>}<span>{brand.name}</span></Link>)}
                                     </NavDropdown>
                                     <li className="nav-item"><Link className="nav-link" to="/profile">Orders & Account</Link></li>
+                                    <li className="nav-item"><Link className="nav-link" to="/about">About</Link></li>
                                 </ul>
                             </div>
                         </nav>

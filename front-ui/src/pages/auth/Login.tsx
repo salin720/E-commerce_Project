@@ -45,10 +45,10 @@ export const Login: React.FC = () => {
     return <>
         <Container>
             <Row>
-                <Col xl={4} className="my-5 mx-auto py-4 bg-white rounded-2 shadow-sm">
+                <Col xl={4} className="my-5 mx-auto py-5 px-4 bg-white rounded-4 shadow-sm border-soft">
                     <Row>
                         <Col className="text-center">
-                            <h1>Login</h1>
+                            <h1 className="fw-bold mb-3">Login</h1>
                         </Col>
                     </Row>
                     <Row>
@@ -64,7 +64,7 @@ export const Login: React.FC = () => {
                                 </Form.Check>
 
                                 <Form.Group className="d-grid">
-                                    <SubmitBtn disabled={formik.isSubmitting} label={"Log in"} icon={'fa-arrow-right-to-bracket'}/>
+                                    <SubmitBtn disabled={formik.isSubmitting} label={"Log In"} icon={'fa-arrow-right-to-bracket'}/>
                                 </Form.Group>
                             </Form>
                         </Col>

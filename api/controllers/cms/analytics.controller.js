@@ -31,15 +31,13 @@ async function aggProducts(fromDate, toDate, unit){
 
 async function aggSales(fromDate, toDate, unit){
   return Detail.aggregate([
-    { $match: { createdAt: { $gte: fromDate, $lte: toDate } } },
     { $lookup: { from: 'orders', localField: 'orderId', foreignField: '_id', as: 'order' } },
     { $unwind: '$order' },
-    // Consider only Delivered orders as sold; adjust if needed
-    { $match: { 'order.status': 'Delivered' } },
+    { $match: { 'order.createdAt': { $gte: fromDate, $lte: toDate }, 'order.status': { $ne: 'Cancelled' } } },
     { $group: {
-      _id: dateTruncStage('createdAt', unit),
+      _id: dateTruncStage('order.createdAt', unit),
       productsSold: { $sum: '$qty' },
-      revenue: { $sum: '$total' }
+      revenue: { $sum: { $cond: [{ $or: [ { $eq: ['$order.paymentStatus', 'Paid'] }, { $eq: ['$order.paymentMethod', 'COD'] } ] }, '$total', 0] } }
     } },
     { $project: {
       _id: 0,
@@ -47,6 +45,15 @@ async function aggSales(fromDate, toDate, unit){
       productsSold: 1,
       revenue: 1
     } },
+    { $sort: { period: 1 } },
+  ])
+}
+
+async function aggOrders(fromDate, toDate, unit){
+  return Order.aggregate([
+    { $match: { createdAt: { $gte: fromDate, $lte: toDate }, status: { $ne: 'Cancelled' } } },
+    { $group: { _id: dateTruncStage('createdAt', unit), ordersCount: { $sum: 1 } } },
+    { $project: { _id: 0, period: formatPeriod('$_id'), ordersCount: 1 } },
     { $sort: { period: 1 } },
   ])
 }
@@ -65,10 +72,11 @@ class AnalyticsController {
     try{
       const { fromDate, toDate, unit } = parseRange(req.query)
 
-      const [productsAgg, salesAgg, customersAgg] = await Promise.all([
+      const [productsAgg, salesAgg, customersAgg, ordersAgg] = await Promise.all([
         aggProducts(fromDate, toDate, unit),
         aggSales(fromDate, toDate, unit),
         aggCustomers(fromDate, toDate, unit),
+        aggOrders(fromDate, toDate, unit),
       ])
 
       const map = new Map()
@@ -80,6 +88,7 @@ class AnalyticsController {
       add(productsAgg, ['count'])
       add(salesAgg, ['productsSold','revenue'])
       add(customersAgg, ['newCustomers'])
+      add(ordersAgg, ['ordersCount'])
 
       let buckets = Array.from(map.values()).sort((a,b) => a.period.localeCompare(b.period))
 
@@ -95,6 +104,7 @@ class AnalyticsController {
           revenue: b.revenue || 0,
           newCustomers: b.newCustomers || 0,
           customersTotal: running,
+          ordersCount: b.ordersCount || 0,
         }
       })
 
@@ -108,18 +118,18 @@ class AnalyticsController {
     try{
       const { fromDate, toDate } = parseRange(req.query)
 
-      const [productsAdded, salesSummary, newCustomers, customersTotal] = await Promise.all([
+      const [productsAdded, salesSummary, newCustomers, customersTotal, ordersCount] = await Promise.all([
         Product.countDocuments({ createdAt: { $gte: fromDate, $lte: toDate } }),
         Detail.aggregate([
-          { $match: { createdAt: { $gte: fromDate, $lte: toDate } } },
           { $lookup: { from: 'orders', localField: 'orderId', foreignField: '_id', as: 'order' } },
           { $unwind: '$order' },
-          { $match: { 'order.status': 'Delivered' } },
-          { $group: { _id: null, productsSold: { $sum: '$qty' }, revenue: { $sum: '$total' } } },
+          { $match: { 'order.createdAt': { $gte: fromDate, $lte: toDate }, 'order.status': { $ne: 'Cancelled' } } },
+          { $group: { _id: null, productsSold: { $sum: '$qty' }, revenue: { $sum: { $cond: [{ $or: [ { $eq: ['$order.paymentStatus', 'Paid'] }, { $eq: ['$order.paymentMethod', 'COD'] } ] }, '$total', 0] } } } },
           { $project: { _id: 0, productsSold: 1, revenue: 1 } }
         ]).then(arr => arr[0] || { productsSold: 0, revenue: 0 }),
         User.countDocuments({ role: 'Customer', createdAt: { $gte: fromDate, $lte: toDate } }),
         User.countDocuments({ role: 'Customer', createdAt: { $lte: toDate } }),
+        Order.countDocuments({ createdAt: { $gte: fromDate, $lte: toDate }, status: { $ne: 'Cancelled' } }),
       ])
 
       res.send({
@@ -130,6 +140,7 @@ class AnalyticsController {
         loss: salesSummary.loss,
         newCustomers,
         customersTotal,
+        ordersCount,
       })
     } catch (error){
       ErrorMessage(next, error)

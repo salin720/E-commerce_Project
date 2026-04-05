@@ -37,7 +37,7 @@ class MixController {
                 const price = product.discountedPrice > 0 ? product.discountedPrice : product.price
                 const total = price * item.qty
                 amount += total
-                await Detail.create({orderId: order._id, productId: product._id, qty: item.qty, price, total})
+                await Detail.create({orderId: order._id, productId: product._id, qty: item.qty, price, total, selectedSize: item.selectedSize || '', selectedColor: item.selectedColor || ''})
                 await Product.findByIdAndUpdate(product._id, { $inc: { stock: -Number(item.qty || 0), totalSold: method === 'COD' ? Number(item.qty || 0) : 0 } })
             }
             await Payment.findOneAndUpdate(
