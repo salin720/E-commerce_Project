@@ -28,9 +28,11 @@ class OrderController {
             const  {status, paymentStatus, trackingCode, adminNote} = req.body
             const order = await Order.findById(id)
             if(order){
-                await Order.findByIdAndUpdate(id, { ...(status ? {status} : {}), ...(trackingCode !== undefined ? {trackingCode} : {}), ...(adminNote !== undefined ? {adminNote} : {}) },{runValidators: true})
-                if (paymentStatus) {
-                    await Payment.findOneAndUpdate({ orderId: id }, { status: paymentStatus }, { new: true })
+                const updateDoc = { ...(status ? {status} : {}), ...(trackingCode !== undefined ? {trackingCode} : {}), ...(adminNote !== undefined ? {adminNote} : {}) }
+                if (paymentStatus && order.paymentMethod === 'COD') updateDoc.paymentStatus = paymentStatus
+                await Order.findByIdAndUpdate(id, updateDoc, { runValidators: true })
+                if (paymentStatus && order.paymentMethod === 'COD') {
+                    await Payment.findOneAndUpdate({ orderId: id }, { status: paymentStatus }, { new: true, upsert: true })
                 }
                 res.send({ message:"Order Updated" })
             }else{ DataNotFound(next, "Order") }

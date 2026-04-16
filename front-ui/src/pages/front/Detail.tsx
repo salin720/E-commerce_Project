@@ -10,6 +10,22 @@ import { Button } from "react-bootstrap"
 import { setCart } from "@/store"
 import { toast } from "react-toastify"
 
+type ComparisonSuggestion = { currentProduct: ProductData; alternatives: ProductData[] }
+
+const getEffectivePrice = (product?: ProductData) => product ? (product.discountedPrice && product.discountedPrice > 0 ? product.discountedPrice : product.price || 0) : 0
+const getCategoryKey = (product?: ProductData) => String(product?.category?._id || product?.categoryId || "")
+const specRows = [
+  { label: "Brand", value: (p: ProductData) => p.brand?.name || "—" },
+  { label: "Category", value: (p: ProductData) => p.category?.name || "—" },
+  { label: "Selling price", value: (p: ProductData) => `Rs. ${getEffectivePrice(p).toLocaleString()}` },
+  { label: "Original price", value: (p: ProductData) => `Rs. ${Number(p.price || 0).toLocaleString()}` },
+  { label: "Discount", value: (p: ProductData) => `${Math.max(0, Math.round(((Number(p.price || 0) - getEffectivePrice(p)) / Math.max(Number(p.price || 0), 1)) * 100))}%` },
+  { label: "Smart score", value: (p: ProductData) => `${getSmartPurchaseScore(p).score}/100` },
+  { label: "User rating", value: (p: ProductData) => `${Number(p.avgRating || 0).toFixed(1)} / 5` },
+]
+const getNumericSpecValue = (label: string, p: ProductData) => { switch(label){ case "Selling price": return getEffectivePrice(p); case "Original price": return Number(p.price||0); case "Discount": return Math.max(0, Math.round(((Number(p.price || 0) - getEffectivePrice(p)) / Math.max(Number(p.price || 0), 1)) * 100)); case "Smart score": return getSmartPurchaseScore(p).score; case "User rating": return Number(p.avgRating || 0); default: return null; } }
+const getCellTone = (label: string, p: ProductData, all: ProductData[]) => { const value = getNumericSpecValue(label,p); if(value===null) return "neutral"; const values = all.map(i=>getNumericSpecValue(label,i)).filter((v): v is number => v!==null); if(values.length<2 || new Set(values).size===1) return "neutral"; const lower = ["Selling price","Original price"].includes(label); const best = lower ? Math.min(...values) : Math.max(...values); const worst = lower ? Math.max(...values) : Math.min(...values); if(value===best && value!==worst) return "best"; if(value===worst && value!==best) return "worst"; return "neutral" }
+
 export const Detail: React.FC = () => {
     const user: UserType = useSelector((state: any) => state.user.value)
     const navigate = useNavigate()
@@ -28,11 +44,13 @@ export const Detail: React.FC = () => {
     const [qty, setQty] = useState<number>(1)
     const [selectedSize, setSelectedSize] = useState<string>("")
     const [selectedColor, setSelectedColor] = useState<string>("")
+    const wishlistKey = user?._id ? `wishlist_${user._id}` : "wishlist_guest"
     const [wishlist, setWishlist] = useState<string[]>(() => {
-        const saved = localStorage.getItem("wishlist")
+        const saved = localStorage.getItem(user?._id ? `wishlist_${user._id}` : "wishlist_guest")
         return saved ? JSON.parse(saved) : []
     })
     const [visibleReviews, setVisibleReviews] = useState<number>(10)
+    const [comparison, setComparison] = useState<ComparisonSuggestion | null>(null)
     const trackedViewRef = useRef<string | null>(null)
 
     useEffect(() => {
@@ -40,7 +58,9 @@ export const Detail: React.FC = () => {
         Promise.all([http.get(`/products/${params.id}`), http.get(`/recommendations/similar/${params.id}`)])
             .then(([{ data: { product: pData } }, { data: sData }]) => {
                 setProduct(pData)
-                setSimilar(sData?.products || sData?.similar || [])
+                const sameProducts = (sData?.products || sData?.similar || []).filter((item: ProductData) => getCategoryKey(item) === getCategoryKey(pData))
+                setSimilar(sameProducts)
+                setComparison({ currentProduct: pData, alternatives: sameProducts.slice(0, 3) })
                 setBigImg(pData?.images?.length ? imgUrl(pData.images[0]) : "")
                 setSelectedSize(pData?.sizes?.[0] || "")
                 setSelectedColor(pData?.colors?.[0] || "")
@@ -74,6 +94,11 @@ export const Detail: React.FC = () => {
     const purchaseScore = useMemo(() => getSmartPurchaseScore(product), [product])
     const priceStability = useMemo(() => getPriceStability(product), [product])
 
+    useEffect(() => {
+        const savedWishlist = localStorage.getItem(wishlistKey)
+        setWishlist(savedWishlist ? JSON.parse(savedWishlist) : [])
+    }, [wishlistKey])
+
     const handleReview = (e: any) => {
         e.preventDefault()
         setLoading(true)
@@ -98,7 +123,7 @@ export const Detail: React.FC = () => {
                 toast.success("Added to wishlist")
                 if (user) http.post('/activity/wishlist', { productId, active: true }).catch(() => {})
             }
-            localStorage.setItem("wishlist", JSON.stringify(newWishlist))
+            localStorage.setItem(wishlistKey, JSON.stringify(newWishlist))
             window.dispatchEvent(new Event('wishlist-updated'))
             return newWishlist
         })
@@ -265,7 +290,71 @@ export const Detail: React.FC = () => {
                 )}
             </div>
 
-            <ProductSection data={similar} title="Similar Products" size="sm" emptyText="No similar products found right now." />
+            <div className="col-12">
+                {comparison && comparison.alternatives.length > 0 && (
+                    <div className="cart-compare-shell p-4 mb-4">
+                        <div className="mb-3">
+                            <h3 className="mb-1">Product Comparison</h3>
+                            <p className="text-muted mb-0">Compare this product with similar items before adding to cart.</p>
+                        </div>
+                        <div className="cart-compare-card compare-table-wrap">
+                            <div className="table-responsive">
+                                <table className="table cart-compare-table align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th className="spec-col">Specification</th>
+                                            {[comparison.currentProduct, ...comparison.alternatives].slice(0, 4).map((item, index) => {
+                                                const score = getSmartPurchaseScore(item).score
+                                                const stability = getPriceStability(item)
+                                                return (
+                                                    <th key={item._id} className={`compare-col ${index === 0 ? 'compare-current' : ''}`}>
+                                                        <div className="compare-head-card">
+                                                            <img src={item.images?.[0] ? imgUrl(item.images[0]) : '/avatar.png'} className="compare-head-image" />
+                                                            <div className="compare-head-title">{item.name}</div>
+                                                            <div className="compare-head-meta">{item.brand?.name || item.category?.name || 'Quick Cart'}</div>
+                                                            <div className="compare-head-pills">
+                                                                <span className="insight-chip insight-score">{score}/100</span>
+                                                                <span className={`insight-chip insight-${stability.tone}`}>
+                                                                    <i className={`fas ${stability.tone === 'up' ? 'fa-arrow-trend-up' : stability.tone === 'down' ? 'fa-arrow-trend-down' : 'fa-wave-square'} me-2`}></i>
+                                                                    {stability.text}
+                                                                </span>
+                                                            </div>
+                                                            {index === 0 ? (
+                                                                <span className="compare-current-badge">Current product</span>
+                                                            ) : (
+                                                                <button className="btn btn-dark btn-sm rounded-pill px-3" onClick={() => navigate(`/products/${item._id}`)}>
+                                                                    View details
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </th>
+                                                )
+                                            })}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {specRows.map((row) => (
+                                            <tr key={row.label}>
+                                                <th className="spec-row-title">{row.label}</th>
+                                                {[comparison.currentProduct, ...comparison.alternatives].slice(0, 4).map((item, index) => (
+                                                    <td
+                                                        key={`${item._id}-${row.label}`}
+                                                        className={`${index === 0 ? 'compare-value compare-current-cell' : 'compare-value'} compare-tone-${getCellTone(row.label, item, [comparison.currentProduct, ...comparison.alternatives].slice(0, 4))}`}
+                                                    >
+                                                        {row.value(item)}
+                                                    </td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                <ProductSection data={similar} title="Similar Products" size="sm" emptyText="No similar products found right now." />
+            </div>
         </main>
     </div>
 }

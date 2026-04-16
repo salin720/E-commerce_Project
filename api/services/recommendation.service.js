@@ -171,16 +171,16 @@ const getRecommendationsForUser = async (userId, { limit = 12, excludePurchased 
 const getSimilarProducts = async (productId, { limit = 8 } = {}) => {
     const source = await Product.findById(productId).lean()
     if (!source) return []
-    const products = await Product.find({ status: true, _id: { $ne: productId } }).lean()
+    const products = await Product.find({ status: true, _id: { $ne: productId }, categoryId: source.categoryId }).lean()
     const sourcePrice = source.discountedPrice > 0 ? source.discountedPrice : source.price
 
     return products.map(product => {
             let score = 0
-            if (String(product.categoryId) === String(source.categoryId)) score += 45
+            if (String(product.categoryId) === String(source.categoryId)) score += 55
             if (String(product.brandId) === String(source.brandId)) score += 20
             const price = product.discountedPrice > 0 ? product.discountedPrice : product.price
             const diffRatio = Math.abs(price - sourcePrice) / Math.max(sourcePrice, 1)
-            if (diffRatio <= 0.15) score += 18
+            if (diffRatio <= 0.15) score += 16
             else if (diffRatio <= 0.35) score += 10
             const sourceWords = new Set(normalizeQuery(`${source.name} ${source.shortDescription}`).split(' ').filter(Boolean))
             const targetWords = normalizeQuery(`${product.name} ${product.shortDescription}`).split(' ').filter(Boolean)

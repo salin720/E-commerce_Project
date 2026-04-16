@@ -61,3 +61,13 @@ body { background: #f6f7fb; font-family: Inter, system-ui, sans-serif; color: #1
 .payment-state-badge.pending{background:#fff7ed;color:#ea580c}
 .payment-state-badge.failed{background:#fef2f2;color:#dc2626}
 .payment-state-badge.neutral{background:#f8fafc;color:#475569}
+
+
+/* latest cms profile/login/payments tweaks */
+.cms-login-shell{min-height:100vh;display:flex;align-items:center;justify-content:center;}
+.payments-toolbar-wide{flex-wrap:wrap;align-items:flex-start;}
+.payments-amount{font-weight:800;color:#111827}
+.payments-toolbar .date-filter-panel{width:100%}
+@media (max-width: 768px){.payments-toolbar-wide{flex-direction:column}.payments-filter-select{max-width:none;width:100%}}
+
+.order-form-control{min-height:46px;border-radius:14px;text-align:center}.order-form-control.form-control,.order-form-control.form-select{text-align:center}

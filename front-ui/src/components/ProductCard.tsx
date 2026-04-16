@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from "react-redux"
 import { setCart } from "@/store"
 import { toast } from "react-toastify"
 import http from "@/http"
+import { useMemo, useState } from "react"
 
 export const ProductCard: React.FC<{ product: ProductData }> = ({ product }) => {
     const user: UserType = useSelector((state: any) => state.user.value)
@@ -13,6 +14,8 @@ export const ProductCard: React.FC<{ product: ProductData }> = ({ product }) => 
     const dispatch = useDispatch()
     const navigate = useNavigate()
     const finalPrice = product.discountedPrice > 0 ? product.discountedPrice : product.price
+    const defaultColor = useMemo(() => product.colors?.[0] || "", [product.colors])
+    const [selectedColor, setSelectedColor] = useState<string>(defaultColor)
     const discountPercent = product.discountedPrice > 0 ? Math.round(((product.price - product.discountedPrice) / product.price) * 100) : 0
     const { score } = getSmartPurchaseScore(product)
     const priceStability = getPriceStability(product)
@@ -28,7 +31,7 @@ export const ProductCard: React.FC<{ product: ProductData }> = ({ product }) => 
         const id = product._id
         const existing = cart[id]
         const qty = existing ? existing.qty + 1 : 1
-        dispatch(setCart({ ...cart, [id]: { product, qty, price: finalPrice, total: finalPrice * qty } }))
+        dispatch(setCart({ ...cart, [id]: { product, qty, price: finalPrice, total: finalPrice * qty, selectedColor } }))
         http.post('/activity/cart', { productId: product._id, action: 'add', qty, source: 'product_card' }).catch(() => {})
         toast.success(`${product.name} added to cart.`)
     }
@@ -66,12 +69,20 @@ export const ProductCard: React.FC<{ product: ProductData }> = ({ product }) => 
                         <span className="price-real">Rs. {finalPrice}</span>
                         {discountPercent > 0 && <span className="price-old-real">Rs. {product.price}</span>}
                     </div>
-                    <div className="d-flex justify-content-between align-items-center gap-2 mt-auto">
-                        <span className={`stock-pill ${(product.stock || 0) > 0 ? 'in' : 'low'}`}>
-                            {(product.stock || 0) > 0 ? `${product.stock} in stock` : 'Low stock'}
-                        </span>
-                        <button className="btn btn-dark btn-sm" onClick={handleAddToCart}>Add</button>
-                    </div>
+
+{product.colors && product.colors.length > 0 ? (
+    <div className="mb-2">
+        <select className="form-select form-select-sm product-color-select" value={selectedColor} onChange={(e) => setSelectedColor(e.target.value)}>
+            {product.colors.map((color) => <option key={color} value={color}>{color}</option>)}
+        </select>
+    </div>
+) : null}
+<div className="d-flex justify-content-between align-items-center gap-2 mt-auto">
+    <span className={`stock-pill ${(product.stock || 0) > 0 ? 'in' : 'low'}`}>
+        {(product.stock || 0) > 0 ? `${product.stock} in stock` : 'Low stock'}
+    </span>
+    <button className="btn btn-dark btn-sm" onClick={handleAddToCart}>Add</button>
+</div>
                 </div>
             </div>
         </div>

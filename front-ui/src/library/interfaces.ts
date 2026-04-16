@@ -104,6 +104,8 @@ export interface OrderData {
     paymentStatus?: 'Pending' | 'Paid' | 'Failed' | 'Refunded'
     trackingCode?: string
     adminNote?: string
+    customerAddress?: string
+    customerPhone?: string
     createdAt: string
     updatedAt: string
     __v: number

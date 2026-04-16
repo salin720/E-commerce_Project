@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { clearCart } from "@/store";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import http from "@/http";
 
 type VerifyParams = { txn_id?: string; amt?: string; pid?: string }
@@ -22,7 +22,6 @@ export default function PaymentSuccess() {
     const [receipt, setReceipt] = useState<any>(null);
     const [searchParams] = useSearchParams();
     const dispatch = useDispatch();
-    const navigate = useNavigate();
 
     useEffect(() => {
         const decoded = decodeEsewaData(searchParams.get("data"))
@@ -53,6 +52,8 @@ export default function PaymentSuccess() {
                         method: paidOrder.paymentMethod || "eSewa",
                         paymentStatus: paidOrder.paymentStatus || "Paid",
                         itemCount,
+                        customerAddress: paidOrder.customerAddress || sessionStorage.getItem("pendingEsewaAddress") || data.user?.address || "",
+                        customerPhone: paidOrder.customerPhone || sessionStorage.getItem("pendingEsewaPhone") || data.user?.phone || "",
                     });
                     dispatch(clearCart());
                     sessionStorage.removeItem("pendingEsewaCart");
@@ -87,8 +88,10 @@ export default function PaymentSuccess() {
                     <div className="receipt-box"><span>Total Amount</span><strong>Rs. {receipt.amount}</strong></div>
                     <div className="receipt-box"><span>Items</span><strong>{receipt.itemCount || 0}</strong></div>
                     <div className="receipt-box"><span>Paid At</span><strong>{receipt.paidAt}</strong></div>
+                    <div className="receipt-box"><span>Mobile Number</span><strong>{receipt.customerPhone || "—"}</strong></div>
+                    <div className="receipt-box"><span>Address</span><strong>{receipt.customerAddress || "—"}</strong></div>
                 </div>
-                <div className="receipt-note mt-3">Your payment is verified successfully. The order has been updated and will appear in your profile orders page.</div>
+                <div className="receipt-note mt-3">Your payment is verified successfully. Your payment status is now marked as Paid. Order confirmation will be updated by admin or staff.</div>
                 <div className="receipt-actions">
                     <button className="btn btn-outline-dark rounded-pill px-4" onClick={() => window.print()}><i className="fa fa-print me-2"></i>Print receipt</button>
                     <Link to="/profile/orders" className="btn btn-dark rounded-pill px-4">Go to orders</Link>

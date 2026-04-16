@@ -8,6 +8,8 @@ const Order = model('Order', new Schema({
     paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Failed', 'Refunded'], default: 'Pending' },
     trackingCode: { type: String, default: '' },
     adminNote: { type: String, default: '' },
+    customerAddress: { type: String, default: '' },
+    customerPhone: { type: String, default: '' },
 }, modelConfig))
 
 module.exports = Order

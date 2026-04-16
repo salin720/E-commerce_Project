@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import http from '@/http'
-import { ProductData } from '@/library/interfaces'
+import { ProductData, UserType } from '@/library/interfaces'
+import { useSelector } from 'react-redux'
 import { Loading, ProductSection } from '@/components'
 
 export const Wishlist: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [products, setProducts] = useState<ProductData[]>([])
+  const user: UserType = useSelector((state: any) => state.user.value)
 
+  const storageKey = user?._id ? `wishlist_${user._id}` : 'wishlist_guest'
   const ids = useMemo(() => {
-    const saved = localStorage.getItem('wishlist')
+    const saved = localStorage.getItem(storageKey)
     return saved ? JSON.parse(saved) as string[] : []
-  }, [])
+  }, [storageKey])
 
   useEffect(() => {
     const load = async () => {
@@ -23,14 +26,19 @@ export const Wishlist: React.FC = () => {
         const responses = await Promise.all(ids.map(id => http.get(`/products/${id}`).catch(() => null)))
         const list = responses
           .map((res: any) => res?.data?.product)
-          .filter(Boolean)
+          .filter((item: any) => item && item.status !== false)
         setProducts(list)
+        const validIds = list.map((item: any) => item._id)
+        if (validIds.length !== ids.length) {
+          localStorage.setItem(storageKey, JSON.stringify(validIds))
+          window.dispatchEvent(new Event('wishlist-updated'))
+        }
       } finally {
         setLoading(false)
       }
     }
     load()
-  }, [ids])
+  }, [ids, storageKey])
 
   return loading ? <Loading /> : (
     <div className="col-12 px-3 px-lg-4 py-4">

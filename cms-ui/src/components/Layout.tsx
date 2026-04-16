@@ -11,12 +11,13 @@ import {fromStorage, removeStorage} from "@/library/function"
 import http from "@/http"
 import {setUser} from "@/store"
 import {Loading} from "./Loading"
-import { Outlet } from "react-router-dom"
+import { Outlet, useLocation } from "react-router-dom"
 
 export const Layout: React.FC = () => {
     const user: UserType = useSelector((state: any) => state.user.value)
     const [loading, setLoading] = useState<boolean>(true)
     const dispatch = useDispatch()
+    const location = useLocation()
     useEffect(() => {
         if (!user) {
             const token = fromStorage('m3pmctoken')
@@ -25,5 +26,6 @@ export const Layout: React.FC = () => {
             } else setLoading(false)
         } else setLoading(false)
     }, [user, dispatch])
-    return loading ? <Loading /> : <div className="d-flex admin-shell"><AppNav /><main className="admin-main"><Outlet /></main></div>
+    const isAuthPage = location.pathname === "/login"
+    return loading ? <Loading /> : isAuthPage ? <main className="w-100 min-vh-100 d-flex align-items-center justify-content-center"><Outlet /></main> : <div className="d-flex admin-shell"><AppNav /><main className="admin-main"><Outlet /></main></div>
 }

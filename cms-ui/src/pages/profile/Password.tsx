@@ -1,4 +1,5 @@
-import {Col, Container, Row, Form,} from "react-bootstrap";
+
+import {Form} from "react-bootstrap";
 import {PasswordFormData} from "@/library/interfaces"
 import {useFormik} from "formik"
 import {PasswordFormValidation} from "@/library/validations"
@@ -27,30 +28,12 @@ export const Password: React.FC = ()=> {
         }
     })
     return <>
-        <Container>
-            <Row>
-                <Col className="my-3 py-3 bg-white rounded-2 shadow-sm">
-                    <Row>
-                        <Col>
-                            <h1>Edit Password</h1>
-                        </Col>
-                    </Row>
-                    <Row>
-                        <Col>
-                            <Form onSubmit={formik.handleSubmit}>
-
-                                <InputField formik={formik} name="oldPassword" label="Old Password" type="password" />
-
-                                <InputField formik={formik} name="password" label="Password" type="password" />
-
-                                <InputField formik={formik} name="confirmPassword" label="Confirm Password" type="password" />
-
-                                <SubmitBtn disabled={formik.isSubmitting} />
-                            </Form>
-                        </Col>
-                    </Row>
-                </Col>
-            </Row>
-        </Container>
+        <h4 className="mb-3">Change Password</h4>
+        <Form onSubmit={formik.handleSubmit}>
+            <InputField formik={formik} name="oldPassword" label="Old Password" type="password" />
+            <InputField formik={formik} name="password" label="Password" type="password" />
+            <InputField formik={formik} name="confirmPassword" label="Confirm Password" type="password" />
+            <SubmitBtn disabled={formik.isSubmitting} />
+        </Form>
     </>
 }

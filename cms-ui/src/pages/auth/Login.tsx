@@ -43,9 +43,9 @@ export const Login: React.FC = () => {
     })
 
     return <>
-        <Container>
-            <Row>
-                <Col xl={4} className="my-5 mx-auto py-5 px-4 bg-white rounded-4 shadow-sm border-soft">
+        <Container fluid className="cms-login-shell px-3">
+            <Row className="w-100 justify-content-center mx-0">
+                <Col xl={4} lg={5} md={7} sm={10} className="py-5 px-4 bg-white rounded-4 shadow-sm border-soft mx-auto">
                     <Row>
                         <Col className="text-center">
                             <h1 className="fw-bold mb-3">Login</h1>

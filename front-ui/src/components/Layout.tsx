@@ -27,10 +27,14 @@ export const Layout: React.FC = () => {
     const [showSuggestions, setShowSuggestions] = useState(false)
     const [wishlistCount, setWishlistCount] = useState<number>(0)
     const searchWrapRef = useRef<HTMLFormElement | null>(null)
-    const [hideSearchBar, setHideSearchBar] = useState(false)
 
     const dispatch = useDispatch()
     const navigate = useNavigate()
+    const storageWishlistKey = user?._id ? `wishlist_${user._id}` : 'wishlist_guest'
+
+    const chunkItems = (items: CatBrandData[], size = 5) => Array.from({ length: Math.ceil(items.length / size) }, (_, i) => items.slice(i * size, i * size + size))
+    const categoryColumns = chunkItems(categories)
+    const brandColumns = chunkItems(brands)
 
     useEffect(() => {
         Promise.all([http.get("/categories"), http.get("/brands")])
@@ -48,7 +52,7 @@ export const Layout: React.FC = () => {
                 setLoading(true)
                 http.get("/profile/details")
                     .then(({ data }) => dispatch(setUser(data)))
-                    .catch(() => removeStorage("m3pmftoken"))
+                    .catch(() => {})
                     .finally(() => setLoading(false))
             }
         }
@@ -66,7 +70,7 @@ export const Layout: React.FC = () => {
 
     useEffect(() => {
         const syncWishlist = () => {
-            const saved = localStorage.getItem("wishlist")
+            const saved = localStorage.getItem(storageWishlistKey)
             const localWishlist = saved ? JSON.parse(saved) : []
             setWishlistCount(localWishlist.length)
         }
@@ -79,7 +83,7 @@ export const Layout: React.FC = () => {
             window.removeEventListener('wishlist-updated', syncWishlist as EventListener)
             window.removeEventListener('focus', syncWishlist)
         }
-    }, [])
+    }, [storageWishlistKey])
 
     useEffect(() => {
         if (!term.trim()) {
@@ -113,18 +117,6 @@ export const Layout: React.FC = () => {
         return () => document.removeEventListener('mousedown', close)
     }, [])
 
-
-    useEffect(() => {
-        let lastY = window.scrollY
-        const onScroll = () => {
-            const currentY = window.scrollY
-            if (currentY > 140 && currentY > lastY) setHideSearchBar(true)
-            else if (currentY < lastY || currentY <= 80) setHideSearchBar(false)
-            lastY = currentY
-        }
-        window.addEventListener('scroll', onScroll, { passive: true })
-        return () => window.removeEventListener('scroll', onScroll)
-    }, [])
 
     const handleLogout = () => {
         if (!window.confirm('Are you sure want to logout? Please save your info before logout.')) return
@@ -163,7 +155,7 @@ export const Layout: React.FC = () => {
                             <div className="col-lg-2 col-md-3 col-12">
                                 <Link to="/" className="site-logo-real text-decoration-none">Quick <span>Cart</span></Link>
                             </div>
-                            <div className={`col-lg-7 col-md-6 col-12 search-shell-wrap ${hideSearchBar ? "search-shell-hidden" : ""}`}>
+                            <div className="col-lg-6 col-md-5 col-12 search-shell-wrap">
                                 <form onSubmit={handleSearch} className="search-shell" ref={searchWrapRef} >
                                     <input
                                         className="search-input-real"
@@ -188,8 +180,18 @@ export const Layout: React.FC = () => {
                                     )}
                                 </form>
                             </div>
-                            <div className="col-lg-3 col-md-3 col-12 d-flex justify-content-lg-end gap-2 flex-wrap align-items-center">
-                                <Link to="/profile" className="icon-pill text-decoration-none"><img src={avatarUrl} className="avatar-mini" /> <span>{user ? user.name.split(' ')[0] : 'Guest'}</span></Link>
+                            <div className="col-lg-4 col-md-4 col-12 d-flex justify-content-lg-end gap-2 flex-wrap align-items-center header-actions-wrap">
+                                {user ? (
+                                    <>
+                                        <Link to="/profile" className="icon-pill text-decoration-none"><img src={avatarUrl} className="avatar-mini" /> <span>{user.name.split(' ')[0]}</span></Link>
+                                        <button className="auth-chip auth-chip-outline" onClick={handleLogout} type="button">Logout</button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Link to="/login" className="auth-chip auth-chip-outline text-decoration-none">Login</Link>
+                                        <Link to="/register" className="auth-chip auth-chip-solid text-decoration-none">Register</Link>
+                                    </>
+                                )}
                                 <Link to="/wishlist" className="icon-pill text-decoration-none"><i className="fas fa-heart me-2 text-danger"></i>{wishlistCount}</Link>
                                 <Link to="/cart" className="icon-pill text-decoration-none"><i className="fas fa-cart-shopping me-2"></i>{totalQty} • {money}</Link>
                             </div>
@@ -200,11 +202,23 @@ export const Layout: React.FC = () => {
                             <div className="collapse navbar-collapse" id="mainNav">
                                 <ul className="navbar-nav mx-auto gap-lg-3">
                                     <li className="nav-item"><Link className="nav-link" to="/">Home</Link></li>
-                                    <NavDropdown title="Categories">
-                                        {categories.map(cat => <Link key={cat._id} to={`/categories/${cat._id}`} className="dropdown-item dropdown-media-item">{cat.image ? <img src={cat.image.startsWith('/image/') ? `${import.meta.env.VITE_API_URL}${cat.image}` : imgUrl(cat.image)} alt={cat.name} className="dropdown-media-thumb" /> : <span className="dropdown-media-thumb dropdown-media-fallback"><i className="fa fa-grid-2"></i></span>}<span>{cat.name}</span></Link>)}
+                                    <NavDropdown title="Categories" className="mega-dropdown-wrap">
+                                        <div className="mega-dropdown-grid">
+                                            {categoryColumns.map((column, idx) => (
+                                                <div className="mega-dropdown-col" key={`cat-col-${idx}`}>
+                                                    {column.map(cat => <Link key={cat._id} to={`/categories/${cat._id}`} className="dropdown-item dropdown-media-item">{cat.image ? <img src={cat.image.startsWith('/image/') ? `${import.meta.env.VITE_API_URL}${cat.image}` : imgUrl(cat.image)} alt={cat.name} className="dropdown-media-thumb" /> : <span className="dropdown-media-thumb dropdown-media-fallback"><i className="fa fa-grid-2"></i></span>}<span>{cat.name}</span></Link>)}
+                                                </div>
+                                            ))}
+                                        </div>
                                     </NavDropdown>
-                                    <NavDropdown title="Brands">
-                                        {brands.map(brand => <Link key={brand._id} to={`/brands/${brand._id}`} className="dropdown-item dropdown-media-item">{brand.image ? <img src={brand.image.startsWith('/image/') ? `${import.meta.env.VITE_API_URL}${brand.image}` : imgUrl(brand.image)} alt={brand.name} className="dropdown-media-thumb" /> : <span className="dropdown-media-thumb dropdown-media-fallback"><i className="fa fa-tag"></i></span>}<span>{brand.name}</span></Link>)}
+                                    <NavDropdown title="Brands" className="mega-dropdown-wrap">
+                                        <div className="mega-dropdown-grid">
+                                            {brandColumns.map((column, idx) => (
+                                                <div className="mega-dropdown-col" key={`brand-col-${idx}`}>
+                                                    {column.map(brand => <Link key={brand._id} to={`/brands/${brand._id}`} className="dropdown-item dropdown-media-item">{brand.image ? <img src={brand.image.startsWith('/image/') ? `${import.meta.env.VITE_API_URL}${brand.image}` : imgUrl(brand.image)} alt={brand.name} className="dropdown-media-thumb" /> : <span className="dropdown-media-thumb dropdown-media-fallback"><i className="fa fa-tag"></i></span>}<span>{brand.name}</span></Link>)}
+                                                </div>
+                                            ))}
+                                        </div>
                                     </NavDropdown>
                                     <li className="nav-item"><Link className="nav-link" to="/profile">Orders & Account</Link></li>
                                     <li className="nav-item"><Link className="nav-link" to="/about">About</Link></li>

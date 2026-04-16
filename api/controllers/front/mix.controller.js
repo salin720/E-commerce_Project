@@ -24,9 +24,10 @@ class MixController {
     }
     checkout = async function(req, res, next) {
         try{
-            const {cart, paymentMethod = 'COD'} = req.body
+            const {cart, paymentMethod = 'COD', customerAddress = '', customerPhone = ''} = req.body
             const method = paymentMethod === 'eSewa' ? 'eSewa' : 'COD'
-            const order = await Order.create({userId: req.user._id, status: method === 'COD' ? 'Confirmed' : 'Processing', paymentMethod: method, paymentStatus: method === 'COD' ? 'Pending' : 'Pending'})
+            if (!String(customerAddress).trim() || !String(customerPhone).trim()) return next({ status: 422, message: 'Delivery address and phone number are required.' })
+            const order = await Order.create({userId: req.user._id, status: 'Processing', paymentMethod: method, paymentStatus: 'Pending', customerAddress: String(customerAddress).trim(), customerPhone: String(customerPhone).trim()})
             let amount = 0
             for (let item of cart){
                 const product = await Product.findById(item.productId)

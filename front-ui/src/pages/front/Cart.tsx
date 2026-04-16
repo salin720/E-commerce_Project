@@ -17,62 +17,9 @@ type OptimizationSuggestion = {
 const getEffectivePrice = (product: ProductData) =>
     Number(product?.discountedPrice) > 0 ? Number(product.discountedPrice) : Number(product?.price || 0);
 
-const formatList = (items?: string[]) => (items && items.length > 0 ? items.join(", ") : "—");
 const getCategoryKey = (product?: ProductData | null) => String(product?.categoryId || product?.category?._id || product?.category?.name || "");
 
-const getNumericSpecValue = (label: string, product: ProductData) => {
-    switch (label) {
-        case "Selling price":
-            return getEffectivePrice(product);
-        case "Original price":
-            return Number(product.price || 0);
-        case "Discount":
-            return product.price > 0 && getEffectivePrice(product) < product.price
-                ? Math.round(((product.price - getEffectivePrice(product)) / product.price) * 100)
-                : 0;
-        case "Smart score":
-            return getSmartPurchaseScore(product).score;
-        case "User rating":
-            return Number(product.avgRating || 0);
-        case "Views":
-            return Number(product.totalViews || 0);
-        case "Sales volume":
-            return Number(product.totalSold || 0);
-        case "Stock":
-            return Number(product.stock || 0);
-        case "Price scale": {
-            const stability = getPriceStability(product);
-            return stability.tone === "down" ? stability.differencePercent : stability.tone === "up" ? -stability.differencePercent : 0;
-        }
-        default:
-            return null;
-    }
-};
 
-const getCellTone = (label: string, product: ProductData, comparedProducts: ProductData[]) => {
-    const value = getNumericSpecValue(label, product);
-    if (value === null) return "neutral";
-
-    const values = comparedProducts
-        .map((item) => getNumericSpecValue(label, item))
-        .filter((item): item is number => item !== null);
-
-    if (values.length < 2) return "neutral";
-
-    const unique = Array.from(new Set(values));
-    if (unique.length === 1) return "neutral";
-
-    const lowerIsBetter = ["Selling price", "Original price"].includes(label);
-    const higherIsBetter = ["Discount", "Smart score", "User rating", "Views", "Sales volume", "Stock", "Price scale"].includes(label);
-    if (!lowerIsBetter && !higherIsBetter) return "neutral";
-
-    const best = lowerIsBetter ? Math.min(...values) : Math.max(...values);
-    const worst = lowerIsBetter ? Math.max(...values) : Math.min(...values);
-
-    if (value === best && value !== worst) return "best";
-    if (value === worst && value !== best) return "worst";
-    return "neutral";
-};
 
 export const Cart: React.FC = () => {
     const cart: CartData = useSelector((state: any) => state.cart.value);
@@ -83,7 +30,9 @@ export const Cart: React.FC = () => {
     const [paymentMethod, setPaymentMethod] = useState<string>("cod");
     const [esewaLoading, setEsewaLoading] = useState<boolean>(false);
     const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>([]);
-    const [suggestionLoading, setSuggestionLoading] = useState<boolean>(false);
+    const [selectedItems, setSelectedItems] = useState<Record<string, boolean>>({});
+    const [customerPhone, setCustomerPhone] = useState("");
+    const [customerAddress, setCustomerAddress] = useState("");
 
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -92,11 +41,23 @@ export const Cart: React.FC = () => {
         let tq = 0;
         let tp = 0;
         Object.keys(cart || {}).forEach((id) => {
+            if (selectedItems[id] === false) return;
             tq += Number(cart[id]?.qty) || 0;
             tp += Number(cart[id]?.total) || 0;
         });
         setTotalQty(tq);
         setTotalPrice(tp);
+    }, [cart, selectedItems]);
+
+
+    useEffect(() => {
+        setSelectedItems((prev) => {
+            const next: Record<string, boolean> = {};
+            Object.keys(cart || {}).forEach((id) => {
+                next[id] = prev[id] ?? true;
+            });
+            return next;
+        });
     }, [cart]);
 
     useEffect(() => {
@@ -110,7 +71,6 @@ export const Cart: React.FC = () => {
 
         const loadSuggestions = async () => {
             try {
-                setSuggestionLoading(true);
                 const responses = await Promise.all(
                     productIds.map(async (id) => {
                         try {
@@ -153,7 +113,6 @@ export const Cart: React.FC = () => {
                 );
                 if (!isCancelled) setSuggestions(responses.filter(Boolean) as OptimizationSuggestion[]);
             } finally {
-                if (!isCancelled) setSuggestionLoading(false);
             }
         };
 
@@ -172,7 +131,7 @@ export const Cart: React.FC = () => {
     );
 
     const handleClearCart = () => {
-        if (!window.confirm("Are you sure you want to clear your cart?")) return;
+        if (!window.confirm("Are you sure want to delete?")) return;
         dispatch(clearCart());
     };
 
@@ -187,33 +146,18 @@ export const Cart: React.FC = () => {
         }));
     };
 
+    const handleToggleSelect = (id: string) => setSelectedItems((prev) => ({ ...prev, [id]: !(prev[id] !== false) }));
+
     const handleRemove = (id: string) => {
-        if (!window.confirm("Are you sure you want to remove this item?")) return;
+        if (!window.confirm("Are you sure want to delete?")) return;
         const temp: CartData = {};
         for (const i in cart) if (id !== i) temp[i] = cart[i];
         if (Object.keys(temp).length > 0) dispatch(setCart(temp));
         else dispatch(clearCart());
     };
 
-    const handleReplaceItem = (currentId: string, suggestedProduct: ProductData) => {
-        const existing = cart[currentId];
-        if (!existing) return;
-        const nextCart: CartData = { ...cart };
-        delete nextCart[currentId];
-        const qty = Number(existing.qty) || 1;
-        const price = getEffectivePrice(suggestedProduct);
-        nextCart[suggestedProduct._id] = {
-            product: suggestedProduct,
-            qty,
-            price,
-            total: price * qty,
-            selectedSize: existing.selectedSize && suggestedProduct.sizes?.includes(existing.selectedSize) ? existing.selectedSize : "",
-            selectedColor: existing.selectedColor && suggestedProduct.colors?.includes(existing.selectedColor) ? existing.selectedColor : "",
-        };
-        dispatch(setCart(nextCart));
-    };
 
-    const buildPayload = () => Object.keys(cart).map((id) => ({
+    const buildPayload = () => Object.keys(cart).filter((id) => selectedItems[id] !== false).map((id) => ({
         productId: id,
         qty: cart[id].qty,
         selectedSize: cart[id]?.selectedSize || "",
@@ -221,11 +165,15 @@ export const Cart: React.FC = () => {
     }));
 
     const handleCheckout = () => {
-        if (Object.keys(cart).length === 0) return alert("Cart is empty.");
+        const payload = buildPayload();
+        if (payload.length === 0) return alert("Please tick at least one item to place order.");
+        if (!customerPhone.trim() || !customerAddress.trim()) return alert("Please enter delivery phone number and address.");
         setLoading(true);
-        http.post("/checkout", { cart: buildPayload(), paymentMethod: "COD" })
+        http.post("/checkout", { cart: payload, paymentMethod: "COD", customerPhone, customerAddress })
             .then(() => {
-                dispatch(clearCart());
+                const remaining: CartData = {};
+                Object.keys(cart).forEach((id) => { if (selectedItems[id] === false) remaining[id] = cart[id]; });
+                if (Object.keys(remaining).length > 0) dispatch(setCart(remaining)); else dispatch(clearCart());
                 navigate("/profile");
             })
             .catch(() => alert("Checkout failed. Please try again."))
@@ -233,12 +181,17 @@ export const Cart: React.FC = () => {
     };
 
     const handleEsewaCheckout = async () => {
-        if (Object.keys(cart).length === 0) return alert("Cart is empty.");
+        const payload = buildPayload();
+        if (payload.length === 0) return alert("Please tick at least one item to place order.");
+        if (!customerPhone.trim() || !customerAddress.trim()) return alert("Please enter delivery phone number and address.");
         setEsewaLoading(true);
         try {
-            const res = await http.post("/payments/domi/create", { cart: buildPayload() });
-            sessionStorage.setItem("pendingEsewaCart", JSON.stringify(cart));
+            const res = await http.post("/payments/domi/create", { cart: payload, customerPhone, customerAddress });
+            const pendingCart = Object.keys(cart).filter((id) => selectedItems[id] !== false).reduce((acc, id) => ({ ...acc, [id]: cart[id] }), {} as CartData);
+            sessionStorage.setItem("pendingEsewaCart", JSON.stringify(pendingCart));
             sessionStorage.setItem("pendingEsewaAmount", String(totalPrice));
+            sessionStorage.setItem("pendingEsewaAddress", customerAddress);
+            sessionStorage.setItem("pendingEsewaPhone", customerPhone);
             const { esewa } = res.data;
             if (esewa && esewa.action && esewa.fields) {
                 const form = document.createElement("form");
@@ -280,6 +233,7 @@ export const Cart: React.FC = () => {
                                         <table className="table table-hover align-middle mb-0 cart-items-table">
                                             <thead>
                                                 <tr>
+                                                    <th className="text-center" style={{width: "52px"}}>Select</th>
                                                     <th>Product</th>
                                                     <th className="text-nowrap">Price</th>
                                                     <th>Qty</th>
@@ -296,6 +250,9 @@ export const Cart: React.FC = () => {
                                                     const stability = getPriceStability(product);
                                                     return (
                                                         <tr key={id}>
+                                                            <td className="text-center align-top pt-4">
+                                                                <input type="checkbox" className="form-check-input cart-select-checkbox" checked={selectedItems[id] !== false} onChange={() => handleToggleSelect(id)} />
+                                                            </td>
                                                             <td>
                                                                 <div className="d-flex align-items-center gap-3">
                                                                     <img src={product.images?.[0] ? imgUrl(product.images[0]) : "/default.png"} alt={product.name || "Product"} className="cart-item-thumb" />
@@ -341,9 +298,16 @@ export const Cart: React.FC = () => {
                                         <span className="badge rounded-pill text-bg-dark">{summaryBadge}</span>
                                     </div>
                                     <div className="summary-row"><span>Subtotal</span><strong>Rs. {totalPrice}</strong></div>
-                                    <div className="summary-row"><span>Total items</span><strong>{totalQty}</strong></div>
+                                    <div className="summary-row"><span>Selected items</span><strong>{totalQty}</strong></div>
                                     <div className="summary-row"><span>Potential savings</span><strong className="text-success">Rs. {totalPotentialSavings}</strong></div>
                                     <div className="summary-divider"></div>
+                                    <div className="mb-3">
+                                        <div className="fw-semibold mb-2">Delivery details</div>
+                                        <div className="d-grid gap-2">
+                                            <input className="form-control" placeholder="Delivery phone number" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
+                                            <textarea className="form-control" rows={3} placeholder="Delivery address / location" value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} />
+                                        </div>
+                                    </div>
                                     <div className="mb-3">
                                         <div className="fw-semibold mb-2">Payment method</div>
                                         <div className="payment-method-options">
@@ -369,98 +333,7 @@ export const Cart: React.FC = () => {
                             </div>
                         </div>
 
-                        {suggestions.length > 0 ? (
-                            <div className="cart-compare-shell p-3 p-md-4 mt-4">
-                                <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-                                    <div>
-                                        <h4 className="mb-1">Cart optimization suggestions</h4>
-                                        <p className="text-muted mb-0">Same-category comparison only, arranged to show up to four products clearly on one page.</p>
-                                    </div>
-                                    <span className="cart-compare-savings">Potential savings: Rs. {totalPotentialSavings}</span>
-                                </div>
-
-                                <div className="d-flex flex-column gap-4">
-                                    {suggestions.map((suggestion) => {
-                                        const comparedProducts = [suggestion.currentProduct, ...suggestion.alternatives].slice(0, 4);
-                                        const qty = cart[suggestion.currentId]?.qty || 1;
-                                        const bestAlternative = suggestion.alternatives.reduce((best, alt) => {
-                                            const bestSavings = Math.max(0, getEffectivePrice(suggestion.currentProduct) - getEffectivePrice(best));
-                                            const altSavings = Math.max(0, getEffectivePrice(suggestion.currentProduct) - getEffectivePrice(alt));
-                                            return altSavings > bestSavings ? alt : best;
-                                        }, suggestion.alternatives[0]);
-                                        const bestSavings = Math.max(0, getEffectivePrice(suggestion.currentProduct) - getEffectivePrice(bestAlternative)) * qty;
-
-                                        const specRows = [
-                                            { label: "Brand", value: (product: ProductData) => product.brand?.name || "—" },
-                                            { label: "Category", value: (product: ProductData) => product.category?.name || "—" },
-                                            { label: "Selling price", value: (product: ProductData) => `Rs. ${getEffectivePrice(product)}` },
-                                            { label: "Original price", value: (product: ProductData) => `Rs. ${product.price || 0}` },
-                                            { label: "Discount", value: (product: ProductData) => `${product.price > 0 && getEffectivePrice(product) < product.price ? Math.round(((product.price - getEffectivePrice(product)) / product.price) * 100) : 0}%` },
-                                            { label: "Smart score", value: (product: ProductData) => `${getSmartPurchaseScore(product).score}/100` },
-                                            { label: "Price scale", value: (product: ProductData) => getPriceStability(product).text },
-                                            { label: "User rating", value: (product: ProductData) => `${Number(product.avgRating || 0).toFixed(1)} / 5 (${Number(product.reviewCount || 0)})` },
-                                            { label: "Views", value: (product: ProductData) => String(product.totalViews || 0) },
-                                            { label: "Sales volume", value: (product: ProductData) => String(product.totalSold || 0) },
-                                            { label: "Sizes", value: (product: ProductData) => formatList(product.sizes) },
-                                            { label: "Colors", value: (product: ProductData) => formatList(product.colors) },
-                                            { label: "Stock", value: (product: ProductData) => String(product.stock ?? "—") },
-                                            { label: "Key features", value: (product: ProductData) => product.shortDescription || product.description || "—" },
-                                        ];
-
-                                        return (
-                                            <div key={`${suggestion.currentId}-${suggestion.currentProduct._id}`} className="cart-compare-card">
-                                                <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-                                                    <div>
-                                                        <div className="fw-semibold fs-5">Same-category comparison for {suggestion.currentProduct.name}</div>
-                                                        <div className="text-muted">Compare value, price, ratings, and stock side by side before replacing the item.</div>
-                                                    </div>
-                                                    <span className="cart-compare-savings">Best line savings: Rs. {bestSavings}</span>
-                                                </div>
-
-                                                <div className="table-responsive compare-table-wrap">
-                                                    <table className="table cart-compare-table align-middle mb-0">
-                                                        <thead>
-                                                            <tr>
-                                                                <th className="spec-col">Specification</th>
-                                                                {comparedProducts.map((product, index) => {
-                                                                    const isCurrent = index === 0;
-                                                                    const score = getSmartPurchaseScore(product).score;
-                                                                    const stability = getPriceStability(product);
-                                                                    return (
-                                                                        <th key={product._id} className={isCurrent ? "compare-col compare-current" : "compare-col"}>
-                                                                            <div className="compare-head-card">
-                                                                                <img src={product.images?.[0] ? imgUrl(product.images[0]) : "/default.png"} alt={product.name} className="compare-head-image" />
-                                                                                <div className="compare-head-title">{product.name}</div>
-                                                                                <div className="compare-head-meta">{product.brand?.name || "Quick Cart"}</div>
-                                                                                <div className="compare-head-pills">
-                                                                                    <span className="insight-chip insight-score">{score}/100</span>
-                                                                                    <span className={`insight-chip insight-${stability.tone}`}><i className={`fas ${stability.tone === "up" ? "fa-arrow-trend-up" : stability.tone === "down" ? "fa-arrow-trend-down" : "fa-wave-square"} me-2`}></i>{stability.text}</span>
-                                                                                </div>
-                                                                                {isCurrent ? <span className="compare-current-badge">Current in cart</span> : <button className="btn btn-dark btn-sm rounded-pill px-3" type="button" onClick={() => handleReplaceItem(suggestion.currentId, product)}>Replace with this</button>}
-                                                                            </div>
-                                                                        </th>
-                                                                    );
-                                                                })}
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {specRows.map((row) => (
-                                                                <tr key={row.label}>
-                                                                    <th className="spec-row-title">{row.label}</th>
-                                                                    {comparedProducts.map((product, index) => (
-                                                                        <td key={`${product._id}-${row.label}`} className={`${index === 0 ? "compare-value compare-current-cell" : "compare-value"} compare-tone-${getCellTone(row.label, product, comparedProducts)}`}>{row.value(product)}</td>
-                                                                    ))}
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ) : suggestionLoading ? <div className="mt-4 text-muted">Checking same-category optimized alternatives for your cart...</div> : null}
+                        
                     </>
                 ) : (
                     <div className="bg-white rounded-4 border-soft shadow-sm py-5 text-center"><h4 className="mb-0">Cart is empty</h4></div>

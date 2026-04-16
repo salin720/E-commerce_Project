@@ -10,7 +10,14 @@ config()
 
 const app = express()
 
-app.use(cors())
+app.use(cors({
+    origin: [
+        'http://localhost:3000',
+        'http://localhost:4000',
+        'http://localhost:5173'
+    ],
+    credentials: true
+}))
 
 const mongoUrl = process.env.MONGO_URL
 

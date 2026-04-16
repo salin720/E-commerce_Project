@@ -18,7 +18,7 @@ export const ProductSection: React.FC<{ data: ProductData[], title: string, size
 
                 {visible.length > 0 ? (
                     <>
-                        <div className={`row ${size === 'sm' ? 'row-cols-2 row-cols-md-3 row-cols-xl-5' : 'row-cols-2 row-cols-md-3 row-cols-xl-5'} g-3`}>
+                        <div className={`row ${size === 'sm' ? 'row-cols-2 row-cols-md-4 row-cols-xl-6 row-cols-xxl-7 g-2' : 'row-cols-2 row-cols-md-3 row-cols-xl-5 g-3'}`}>
                             {visible.map(product => <ProductCard key={product._id} product={product} />)}
                         </div>
                         {hasMore && (
