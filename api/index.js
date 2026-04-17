@@ -15,8 +15,8 @@ app.use(cors({
         'http://localhost:3000',
         'http://localhost:4000',
         'http://localhost:5173',
-        'https://your-front-ui.onrender.com',
-        'https://your-cms-ui.onrender.com'
+        'https://quickcart-front.onrender.com',
+        'https://quickcart-cms.onrender.com'
     ],
     credentials: true
 }))
