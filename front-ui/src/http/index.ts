@@ -1,6 +1,6 @@
- import axios from "axios"
-import {toast} from "react-toastify"
-import {fromStorage} from "@/library/function"
+import axios from "axios"
+import { toast } from "react-toastify"
+import { fromStorage } from "@/library/function"
 
 const http = axios.create({
     baseURL: import.meta.env.VITE_API_URL,
@@ -10,29 +10,29 @@ const http = axios.create({
     }
 })
 
-//middlewares
+// middlewares
 http.interceptors.response.use(response => {
     const message = response?.data?.message
-    if(message && !/activity tracked\.?$/i.test(message)) {
+    if (message && !/activity tracked\.?$/i.test(message)) {
         toast.success(message)
     }
     return response
 }, error => {
-    if(error?.response?.data?.message) {
+    if (error?.response?.data?.message) {
         toast.error(error.response.data.message)
     }
 
     return Promise.reject(error)
 })
 
-http.interceptors.request.use(config =>{
+http.interceptors.request.use(config => {
     const token = fromStorage('m3pmftoken')
 
-    if(token){
+    if (token) {
         config.headers.setAuthorization(`Bearer ${token}`)
     }
 
     return config
 })
-export default http
 
+export default http
