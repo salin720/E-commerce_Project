@@ -1,7 +1,7 @@
 require('module-alias/register')
 
 const express = require('express')
-const {config} = require('dotenv')
+const { config } = require('dotenv')
 const mongoose = require('mongoose')
 const router = require('./routes')
 const cors = require('cors')
@@ -14,28 +14,30 @@ app.use(cors({
     origin: [
         'http://localhost:3000',
         'http://localhost:4000',
-        'http://localhost:5173'
+        'http://localhost:5173',
+        'https://your-front-ui.onrender.com',
+        'https://your-cms-ui.onrender.com'
     ],
     credentials: true
 }))
 
 const mongoUrl = process.env.MONGO_URL
+const PORT = process.env.PORT || 5000
 
 app.use(express.json())
-app.use(express.urlencoded())
+app.use(express.urlencoded({ extended: true }))
 
 app.use(router)
 
 app.use((error, req, res, next) => {
-    res.status(error.status || 400)
-        .send({
-            message: error.message || 'Something went wrong',
-            validation: error.validation,
-        })
+    res.status(error.status || 400).send({
+        message: error.message || 'Something went wrong',
+        validation: error.validation,
+    })
 })
 
-app.listen(5000, async() => {
-    console.log('Server started as http://localhost:5000')
+app.listen(PORT, async () => {
+    console.log(`Server started as http://localhost:${PORT}`)
     console.log('Press Ctrl+C to stop')
 
     await mongoose.connect(mongoUrl)
